@@ -114,6 +114,8 @@ body {
 /* --- layout --------------------------------------------------------------- */
 
 .app {
+  /* How much the floating pager eats at the bottom — nothing until it appears. */
+  --pager-clear: 0px;
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr) 176px;
   height: 100%;
@@ -148,6 +150,7 @@ body {
 .stage {
   --algbar-h: 124px;
   --transport-h: 88px;
+  position: relative;
   /* One backdrop for the whole column — bar, cube and player sit on it, and
      the canvas is transparent so nothing interrupts it. */
   background: radial-gradient(ellipse at 50% 46%, var(--glow) 0%, var(--bg) 68%);
@@ -928,6 +931,56 @@ body {
   color: var(--accent-text);
 }
 
+/* --- paint mode ------------------------------------------------------------ */
+
+.paintbar {
+  position: absolute;
+  left: 50%;
+  /* Sits below the canvas, in the room freeplay leaves by hiding the transport,
+     so it never crowds the cube. An absolutely positioned box anchors to the
+     padding box, so the pager's clearance has to be added back on by hand. */
+  bottom: calc(14px + var(--pager-clear));
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--overlay);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px var(--shadow);
+}
+
+.paintbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paintbar-status {
+  flex: 1;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.paintbar-note {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.paintbar-note.is-error {
+  color: #ff9aa2;
+}
+
 /* --- stage: transport ----------------------------------------------------- */
 
 .transport {
@@ -1058,6 +1111,7 @@ body {
    * rubber-banding and interrupted swipes all behave the way the platform does.
    */
   .app {
+    --pager-clear: 68px;
     display: flex;
     height: 100vh;
     height: 100dvh;
@@ -1080,8 +1134,7 @@ body {
     min-width: 0;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    /* Clear the floating pager. */
-    padding-bottom: 68px;
+    padding-bottom: var(--pager-clear);
   }
 
   /* A phone has no window chrome to stand the content off the glass, so the

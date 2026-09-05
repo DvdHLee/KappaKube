@@ -23,6 +23,9 @@ export const DEFAULT_FRONT = 'red';
 // the inward-facing sides you glimpse through the seams.
 export const INTERIOR_COLOR = '#131317';
 
+/** A sticker not yet painted. Mid-grey, so it reads on either theme. */
+export const UNPAINTED_COLOR = '#5c5c68';
+
 // Geometry constants, in world units. Lattice spacing is always 1.
 export const SPACING = 1;
 export const CUBIE_SIZE = 0.98; // < SPACING leaves a hairline seam between pieces

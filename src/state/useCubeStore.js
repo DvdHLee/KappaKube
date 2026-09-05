@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createSolvedCube } from '../core/cube.js';
 import { applyAlg, applyMove, invertMove } from '../core/moves.js';
 import { randomScramble } from '../core/scramble.js';
+import { createPainting, paintFacelet, paintingToCube } from '../core/paint.js';
 
 /**
  * Cube state and the move queue.
@@ -45,6 +46,16 @@ export const useCubeStore = create((set, get) => ({
   /** True while a computed solution is playing itself out. */
   solving: false,
 
+  /**
+   * The painting in progress, or null when not in paint mode. While it is set
+   * the cube on screen is the painting, not `cube`.
+   */
+  painting: null,
+
+  /** The colour the brush is loaded with, and why the last click was refused. */
+  paintColour: 'U',
+  paintError: null,
+
   setSize(n) {
     const solved = createSolvedCube(n);
     set({
@@ -56,6 +67,7 @@ export const useCubeStore = create((set, get) => ({
       current: null,
       status: 'idle',
       solving: false,
+      painting: null,
     });
   },
 
@@ -70,6 +82,7 @@ export const useCubeStore = create((set, get) => ({
       current: null,
       status: 'idle',
       solving: false,
+      painting: null,
     });
   },
 
@@ -89,6 +102,7 @@ export const useCubeStore = create((set, get) => ({
       current: null,
       status: 'idle',
       solving: false,
+      painting: null,
     });
   },
 
@@ -108,6 +122,7 @@ export const useCubeStore = create((set, get) => ({
       current: null,
       status: 'idle',
       solving: false,
+      painting: null,
     });
   },
 
@@ -166,6 +181,7 @@ export const useCubeStore = create((set, get) => ({
       current: null,
       status: 'idle',
       solving: false,
+      painting: null,
     });
   },
 
@@ -217,6 +233,59 @@ export const useCubeStore = create((set, get) => ({
 
   cancelDrag() {
     if (get().current?.dragging) set({ current: null });
+  },
+
+  setPaintColour(paintColour) {
+    set({ paintColour, paintError: null });
+  },
+
+  startPainting() {
+    set({
+      painting: createPainting(get().n),
+      paintError: null,
+      queue: [],
+      cursor: 0,
+      current: null,
+      status: 'idle',
+      solving: false,
+    });
+  },
+
+  cancelPainting() {
+    set({ painting: null, paintError: null });
+  },
+
+  /**
+   * Colour one sticker. Refused, with a reason, if it could not be part of a
+   * real cube — see src/core/paint.js.
+   */
+  paintAt(key, colour = get().paintColour) {
+    const { painting } = get();
+    if (!painting) return { ok: false };
+    const result = paintFacelet(painting, key, colour);
+    set(
+      result.ok ? { painting: result.painting, paintError: null } : { paintError: result.reason },
+    );
+    return result;
+  },
+
+  /** Take the finished painting as the cube. */
+  applyPainting() {
+    const { painting } = get();
+    const cube = painting && paintingToCube(painting);
+    if (!cube) return false;
+    set({
+      painting: null,
+      n: cube.n,
+      base: cube,
+      cube,
+      queue: [],
+      cursor: 0,
+      current: null,
+      status: 'idle',
+      solving: false,
+    });
+    return true;
   },
 
   play() {

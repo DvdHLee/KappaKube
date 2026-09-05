@@ -10,6 +10,7 @@ import { useKeyboard } from './ui/useKeyboard.js';
 import { useRememberFreeplay } from './ui/useFreeplay.js';
 import LearnedToggle from './ui/LearnedToggle.jsx';
 import FreeplayTools from './ui/FreeplayTools.jsx';
+import PaintPanel from './ui/PaintPanel.jsx';
 import { useSwipePager } from './ui/useSwipePager.js';
 import Segmented from './ui/Segmented.jsx';
 import { useCubeStore } from './state/useCubeStore.js';
@@ -170,6 +171,10 @@ export default function App() {
             />
           </div>
           <Transport />
+
+          {/* Anchored to the stage, not the canvas, so it sits in the space the
+              transport leaves empty during freeplay instead of over the cube. */}
+          <PaintPanel />
         </main>
 
         <aside className="rail rail--right">

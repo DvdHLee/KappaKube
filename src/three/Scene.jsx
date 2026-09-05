@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import CubeMesh from './CubeMesh.jsx';
 import TurnAnimator from './TurnAnimator.jsx';
 import DragToTurn from './DragToTurn.jsx';
+import PaintMesh from './PaintMesh.jsx';
 import { useCubeStore } from '../state/useCubeStore.js';
 import { FOV, ISO_DIRECTION, cameraDistance, cubeRadius, isoPosition } from './framing.js';
 
@@ -136,6 +137,8 @@ export default function Scene({ n, view, autoRotate, locked, theme, onActiveView
   const [aspect, setAspect] = useState(1);
   const cube = useCubeStore((s) => s.cube);
   const current = useCubeStore((s) => s.current);
+  const painting = useCubeStore((s) => s.painting);
+  const paintAt = useCubeStore((s) => s.paintAt);
 
   return (
     <Canvas
@@ -149,9 +152,13 @@ export default function Scene({ n, view, autoRotate, locked, theme, onActiveView
 
       <Studio theme={theme} />
 
-      <DragToTurn enabled={locked} pivotRef={pivotRef}>
-        <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
-      </DragToTurn>
+      {painting ? (
+        <PaintMesh painting={painting} onPaint={(key) => paintAt(key)} />
+      ) : (
+        <DragToTurn enabled={locked} pivotRef={pivotRef}>
+          <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
+        </DragToTurn>
+      )}
 
       <TurnAnimator pivotRef={pivotRef} />
 
@@ -170,8 +177,8 @@ export default function Scene({ n, view, autoRotate, locked, theme, onActiveView
         enableDamping
         dampingFactor={0.08}
         enablePan={false}
-        enableRotate={!locked}
-        autoRotate={autoRotate && !locked}
+        enableRotate={!locked || Boolean(painting)}
+        autoRotate={autoRotate && !locked && !painting}
         autoRotateSpeed={0.6}
         minDistance={cameraDistance(n, aspect, 0.55)}
         maxDistance={cameraDistance(n, aspect, 2.6)}

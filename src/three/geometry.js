@@ -9,6 +9,7 @@ import {
   DEFAULT_FRONT,
   DEFAULT_TOP,
   INTERIOR_COLOR,
+  UNPAINTED_COLOR,
 } from '../theme.js';
 
 /**
@@ -114,6 +115,55 @@ export function setColorScheme(scheme) {
     paint(attribute.array, geometry.userData.stickers);
     attribute.needsUpdate = true;
   }
+}
+
+/**
+ * Geometry for a part-painted cubie, used only in paint mode.
+ *
+ * Keyed by what the piece currently shows, so the handful of combinations on
+ * screen are built once each. Kept apart from the main cache — which is keyed
+ * by colour *set* and assumes a real piece — because a painting is deliberately
+ * allowed to be incomplete.
+ *
+ * @param {Record<string,string|null>} sides side -> colour letter, null for an
+ *   unpainted sticker, absent for a face that points into the cube
+ */
+const paintCache = new Map();
+
+export function paintedCubieGeometry(sides) {
+  const key = BOX_SIDES.map((side) => (side in sides ? (sides[side] ?? '?') : '.')).join('');
+  const hit = paintCache.get(key);
+  if (hit) return hit;
+
+  const colors = new Float32Array(baseGeometry.attributes.position.count * 3);
+  baseGeometry.groups.forEach((group, i) => {
+    const side = BOX_SIDES[i];
+    const shown = side in sides ? (sides[side] ?? null) : undefined;
+    scratchColor.setStyle(
+      shown === undefined ? INTERIOR_COLOR : shown === null ? UNPAINTED_COLOR : faceColours[shown],
+    );
+    const end = group.start + group.count;
+    for (let v = group.start; v < end; v++) {
+      colors[v * 3] = scratchColor.r;
+      colors[v * 3 + 1] = scratchColor.g;
+      colors[v * 3 + 2] = scratchColor.b;
+    }
+  });
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', baseGeometry.attributes.position);
+  geometry.setAttribute('normal', baseGeometry.attributes.normal);
+  geometry.setAttribute('uv', baseGeometry.attributes.uv);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+
+  paintCache.set(key, geometry);
+  return geometry;
+}
+
+/** Painting is a mode, not a state; its geometries go when the mode does. */
+export function clearPaintCache() {
+  paintCache.clear();
 }
 
 /**

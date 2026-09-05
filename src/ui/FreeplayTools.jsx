@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createSolvedCube } from '../core/cube.js';
+import { canPaint } from '../core/paint.js';
 import { canSolve, solveCube } from '../core/solver.js';
 import { useCubeStore } from '../state/useCubeStore.js';
 import { usePrefsStore } from '../state/usePrefsStore.js';
@@ -21,6 +22,8 @@ export default function FreeplayTools() {
   const solving = useCubeStore((s) => s.solving);
   const enterFreeplay = useCubeStore((s) => s.enterFreeplay);
   const shuffle = useCubeStore((s) => s.shuffle);
+  const startPainting = useCubeStore((s) => s.startPainting);
+  const painting = useCubeStore((s) => s.painting);
   const playSolution = useCubeStore((s) => s.playSolution);
   const selectedCaseId = usePrefsStore((s) => s.selectedCaseId);
 
@@ -28,6 +31,7 @@ export default function FreeplayTools() {
   const [failed, setFailed] = useState(false);
 
   if (selectedCaseId) return null; // a case is loaded; Learned sits here instead
+  if (painting) return null; // the paint panel has its own controls
 
   const solvable = canSolve(n);
 
@@ -80,6 +84,18 @@ export default function FreeplayTools() {
       >
         Reset
       </button>
+
+      {canPaint(n) && (
+        <button
+          type="button"
+          className="cube-corner-btn"
+          disabled={busy || solving}
+          title="Colour in the cube you are holding"
+          onClick={startPainting}
+        >
+          Paint
+        </button>
+      )}
     </>
   );
 }
