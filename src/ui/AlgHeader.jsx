@@ -54,7 +54,9 @@ export default function AlgHeader() {
   if (queue.length === 0) {
     return (
       <div className="algbar is-empty">
-        <span className="algbar-name">Freeplay</span>
+        <span className="algbar-hint">
+          Freeplay
+        </span>
       </div>
     );
   }
