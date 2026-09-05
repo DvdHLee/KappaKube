@@ -72,6 +72,24 @@ export const useCubeStore = create((set, get) => ({
   },
 
   /**
+   * Free play, starting from a given cube — the one the user left behind, so
+   * putting an algorithm away hands their own cube back rather than a solved
+   * one. Falls back to solved when there is nothing remembered.
+   */
+  enterFreeplay(cube) {
+    const start = cube ?? createSolvedCube(get().n);
+    set({
+      n: start.n,
+      base: start,
+      cube: start,
+      queue: [],
+      cursor: 0,
+      current: null,
+      status: 'idle',
+    });
+  },
+
+  /**
    * A free turn — a button press or a key.
    *
    * Deliberately does not touch the timeline: the loaded algorithm stays

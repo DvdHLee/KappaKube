@@ -17,6 +17,9 @@ beforeEach(() => {
     setupOpen: true,
     speed: 280,
     page: 0,
+    theme: 'dark',
+    locked: false,
+    freeplay: {},
   });
 });
 
@@ -96,5 +99,28 @@ describe('pager page', () => {
   it('is remembered', () => {
     prefs().setPage(1);
     expect(prefs().page).toBe(1);
+  });
+});
+
+describe('remembered free cube', () => {
+  it('keeps one per size, so switching does not lose either', () => {
+    prefs().rememberFreeplay(3, { v: 1, n: 3, pieces: [] });
+    prefs().rememberFreeplay(5, { v: 1, n: 5, pieces: [] });
+    expect(Object.keys(prefs().freeplay).sort()).toEqual(['3', '5']);
+    expect(prefs().freeplay[3].n).toBe(3);
+  });
+
+  it('ignores a state that failed to serialise', () => {
+    prefs().rememberFreeplay(3, null);
+    expect(prefs().freeplay[3]).toBeUndefined();
+  });
+});
+
+describe('lock and theme', () => {
+  it('are remembered', () => {
+    prefs().setLocked(true);
+    prefs().setTheme('light');
+    expect(prefs().locked).toBe(true);
+    expect(prefs().theme).toBe('light');
   });
 });

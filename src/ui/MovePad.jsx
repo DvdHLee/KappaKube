@@ -10,14 +10,17 @@ const ROTATIONS = ['x', 'y', 'z'];
 /**
  * Which turns a cube of this size actually has.
  *
- * M/E/S name the single middle layer, which only exists on an odd cube — a 4x4
- * has two inner slices instead, addressed individually as 2R and friends, plus
- * the wide turns its algorithms are written in. A 2x2 has neither.
+ * M/E/S name the single middle layer, so they only appear on an odd cube. From
+ * 4x4 up there are also wide turns and individually addressable inner slices,
+ * which is what big-cube algorithms are written in. A 5x5 has both: a true
+ * middle layer and an inner slice either side of it.
  */
 function turnsFor(n) {
-  if (n === 2) return [FACES, ROTATIONS];
-  if (n % 2 === 1) return [FACES, SLICES, ROTATIONS];
-  return [FACES, WIDE, INNER, ROTATIONS];
+  const groups = [FACES];
+  if (n >= 4) groups.push(WIDE, INNER);
+  if (n >= 3 && n % 2 === 1) groups.push(SLICES);
+  groups.push(ROTATIONS);
+  return groups;
 }
 
 /**

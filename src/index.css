@@ -26,6 +26,8 @@
   --accent-text: #4ede9c;
   --ring: rgba(255, 255, 255, 0.5);
   --ring-soft: rgba(255, 255, 255, 0.14);
+  --scroll-thumb: rgba(255, 255, 255, 0.13);
+  --scroll-thumb-hover: rgba(255, 255, 255, 0.26);
   color-scheme: dark;
 }
 
@@ -48,11 +50,45 @@
   --accent-text: #12784a;
   --ring: rgba(0, 0, 0, 0.45);
   --ring-soft: rgba(0, 0, 0, 0.08);
+  --scroll-thumb: rgba(0, 0, 0, 0.16);
+  --scroll-thumb-hover: rgba(0, 0, 0, 0.3);
   color-scheme: light;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/*
+ * One quiet scrollbar everywhere: a thin rounded thumb on no track, drawn from
+ * theme tokens so it works on both. The platform default was a heavy grey bar
+ * that cut across the panels.
+ *
+ * Firefox takes the two-value shorthand; WebKit needs the pseudo-elements. Both
+ * are set so neither browser falls back to the native chrome.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--scroll-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
 }
 
 html,
@@ -100,6 +136,11 @@ body {
   border-left: 1px solid var(--border);
   padding: 16px 12px;
   gap: 10px;
+  min-height: 0;
+}
+
+.rail--right .panel-title {
+  flex: none;
 }
 
 /* The chrome above and below the cube, named once so the freeplay layout can
@@ -885,10 +926,20 @@ body {
 
 /* --- right rail: move pad ------------------------------------------------- */
 
+/*
+ * A 5x5 offers five families of turn, far more than fits a rail. The list
+ * scrolls rather than being squeezed — cramming the spacing made every size
+ * worse to hit for the sake of the largest one.
+ */
 .movepad {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the scrollbar so it does not sit on top of the buttons. */
+  padding-right: 3px;
 }
 
 /* Two columns: a move and its inverse sit side by side on each row. */
@@ -979,6 +1030,7 @@ body {
     scrollbar-width: none;
   }
 
+  /* The pager is swiped, never dragged by a scrollbar. */
   .app::-webkit-scrollbar {
     display: none;
   }

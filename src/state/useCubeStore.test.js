@@ -280,3 +280,45 @@ describe('loading a library case', () => {
     expect(cubesEqual(store().cube, applyAlg(caseState, alg.slice(0, 3)))).toBe(true);
   });
 });
+
+describe('entering free play', () => {
+  it('starts from a given cube rather than solving', () => {
+    const scrambled = applyAlg(createSolvedCube(3), parseAlg("R U R' F2 D"));
+    store().enterFreeplay(scrambled);
+
+    expect(cubesEqual(store().cube, scrambled)).toBe(true);
+    expect(store().queue).toEqual([]);
+    expect(store().cursor).toBe(0);
+    expect(store().status).toBe('idle');
+  });
+
+  it('makes that cube the point rewind returns to', () => {
+    const scrambled = applyAlg(createSolvedCube(3), parseAlg('R U F'));
+    store().enterFreeplay(scrambled);
+
+    store().turn(parseAlg('D')[0]);
+    settle();
+    expect(cubesEqual(store().cube, scrambled)).toBe(false);
+
+    store().rewind();
+    expect(cubesEqual(store().cube, scrambled)).toBe(true);
+  });
+
+  it('takes the size from the cube it is given', () => {
+    store().enterFreeplay(createSolvedCube(5));
+    expect(store().n).toBe(5);
+    expect(store().cube.n).toBe(5);
+  });
+
+  it('falls back to solved when given nothing', () => {
+    store().setSize(3);
+    store().enterFreeplay(null);
+    expect(cubesEqual(store().cube, createSolvedCube(3))).toBe(true);
+  });
+
+  it('discards a loaded algorithm', () => {
+    store().load(parseAlg("R U R' U'"));
+    store().enterFreeplay(createSolvedCube(3));
+    expect(store().queue).toEqual([]);
+  });
+});

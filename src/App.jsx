@@ -7,6 +7,7 @@ import AlgHeader from './ui/AlgHeader.jsx';
 import Transport from './ui/Transport.jsx';
 import MovePad from './ui/MovePad.jsx';
 import { useKeyboard } from './ui/useKeyboard.js';
+import { useRememberFreeplay } from './ui/useFreeplay.js';
 import LearnedToggle from './ui/LearnedToggle.jsx';
 import { useSwipePager } from './ui/useSwipePager.js';
 import Segmented from './ui/Segmented.jsx';
@@ -15,6 +16,7 @@ import { currentScheme, usePrefsStore } from './state/usePrefsStore.js';
 import { CASES_BY_ID } from './data/cases.js';
 import { parseAlg } from './core/notation.js';
 import { invertAlg } from './core/moves.js';
+import { deserializeCube } from './core/serialize.js';
 import { algIndexFor } from './ui/useLoadCase.js';
 
 /**
@@ -50,16 +52,21 @@ function useRestoreSession() {
     if (restored.current) return;
     restored.current = true;
 
-    const { size, selectedCaseId, chosenAlg } = usePrefsStore.getState();
+    const { size, selectedCaseId, chosenAlg, freeplay } = usePrefsStore.getState();
     const store = useCubeStore.getState();
-
-    if (size !== store.n) store.setSize(size);
 
     const testCase = selectedCaseId ? CASES_BY_ID.get(selectedCaseId) : null;
     if (testCase && testCase.n === size) {
       const alg = parseAlg(testCase.algs[algIndexFor(testCase, chosenAlg)], size);
       store.loadCase(invertAlg(alg), alg, size);
+      return;
     }
+
+    // No case open, so bring back the cube that was left mid-play. A stored
+    // state that fails to load simply gives a solved cube.
+    const remembered = deserializeCube(freeplay[size]);
+    if (remembered) store.enterFreeplay(remembered);
+    else if (size !== store.n) store.setSize(size);
   }, []);
 }
 
@@ -72,7 +79,6 @@ export default function App() {
   const [view, setView] = useState(null); // requested preset
   const [activeView, setActiveView] = useState(null); // where the camera actually is
   const [autoRotate, setAutoRotate] = useState(false);
-  const [locked, setLocked] = useState(false);
 
   // The pager position is remembered, so a phone reopens on the page it was
   // left on. Reading it once at mount keeps the restore out of the render path.
@@ -85,11 +91,14 @@ export default function App() {
   });
 
   const n = useCubeStore((s) => s.n);
+  const locked = usePrefsStore((s) => s.locked);
+  const setLocked = usePrefsStore((s) => s.setLocked);
 
   const theme = useTheme();
   useKeyboard();
   useColorScheme();
   useRestoreSession();
+  useRememberFreeplay();
 
   // A fresh object per click so the rig re-triggers even on the same preset.
   const goToView = (name) => {
@@ -133,7 +142,7 @@ export default function App() {
               aria-pressed={locked}
               aria-label={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
               title={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
-              onClick={() => setLocked((was) => !was)}
+              onClick={() => setLocked(!locked)}
             >
               {locked ? '🔒' : '🔓'}
             </button>

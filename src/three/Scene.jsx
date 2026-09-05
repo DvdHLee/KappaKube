@@ -95,16 +95,16 @@ function ActiveViewProbe({ onChange }) {
  * the page rather than carrying a dark surround onto a light one.
  */
 function Studio({ theme }) {
-  const ambient = theme === 'light' ? '#dcdce4' : '#111114';
+  const ambient = theme === 'light' ? '#e6e6ee' : '#1a1a20';
   return (
     <Environment key={theme} resolution={256} frames={1}>
       <color attach="background" args={[ambient]} />
       {/* key: large softbox overhead */}
-      <Lightformer form="rect" intensity={2.1} position={[0, 6, 1]} scale={[10, 10, 1]} />
+      <Lightformer form="rect" intensity={3.1} position={[0, 6, 1]} scale={[10, 10, 1]} />
       {/* fill: cool, front left */}
       <Lightformer
         form="rect"
-        intensity={0.9}
+        intensity={1.35}
         color="#dce7f5"
         position={[-6, 1, 5]}
         scale={[8, 8, 1]}
@@ -112,12 +112,12 @@ function Studio({ theme }) {
       {/* rim: warm, behind right, separates the cube from the background */}
       <Lightformer
         form="rect"
-        intensity={1.1}
+        intensity={1.6}
         color="#f5e4d2"
         position={[6, 2, -6]}
         scale={[8, 8, 1]}
       />
-      <Lightformer form="rect" intensity={0.5} position={[0, -5, 0]} scale={[8, 8, 1]} />
+      <Lightformer form="rect" intensity={0.7} position={[0, -5, 0]} scale={[8, 8, 1]} />
     </Environment>
   );
 }

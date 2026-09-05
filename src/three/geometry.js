@@ -119,14 +119,15 @@ export function setColorScheme(scheme) {
 /**
  * One material for the whole cube.
  *
- * Deliberately matte: a rougher surface with only a trace of clearcoat keeps
- * the specular highlight from washing the colours out, so each face reads close
- * to its actual palette value rather than looking spotlit.
+ * Deliberately matte. The room is lit normally; it is the *sheen* that made the
+ * cube look washed out, because a glossy coat adds a broad white highlight on
+ * top of every face. Almost no clearcoat and a fairly rough surface keeps each
+ * face reading as its actual palette colour.
  */
 export const cubieMaterial = new THREE.MeshPhysicalMaterial({
   vertexColors: true,
-  roughness: 0.62,
+  roughness: 0.66,
   metalness: 0,
-  clearcoat: 0.12,
-  clearcoatRoughness: 0.5,
+  clearcoat: 0.04,
+  clearcoatRoughness: 0.65,
 });

@@ -20,7 +20,7 @@ import { topViewAnySize } from '../core/topView.js';
 import { OLL_CASES, OLL_GROUPS } from './oll.js';
 import { PLL_CASES, PLL_GROUPS } from './pll.js';
 import { ORTEGA_OLL, ORTEGA_OLL_GROUP, ORTEGA_PBL, ORTEGA_PBL_GROUP } from './ortega.js';
-import { PARITY_CASES, PARITY_GROUP } from './parity.js';
+import { PARITY_CASES, PARITY_GROUP, PARITY_SIZES } from './parity.js';
 
 /** The cube state an algorithm is meant to be applied to. */
 export function stateForAlg(algText, n = 3) {
@@ -88,16 +88,18 @@ export const CASES = [
       algs: c.algs,
     }),
   ),
-  ...PARITY_CASES.map((c) =>
-    build({
-      id: `PAR-${c.id}`,
-      n: 4,
-      kind: 'Parity',
-      label: `${c.id} parity`,
-      name: `${c.name} — ${c.note}`,
-      group: PARITY_GROUP,
-      algs: c.algs,
-    }),
+  ...PARITY_SIZES.flatMap((n) =>
+    PARITY_CASES[n].map((c) =>
+      build({
+        id: `PAR${n}-${c.id}`,
+        n,
+        kind: 'Parity',
+        label: `${c.id} parity`,
+        name: `${c.name} — ${c.note}`,
+        group: PARITY_GROUP,
+        algs: c.algs,
+      }),
+    ),
   ),
 ];
 
@@ -124,14 +126,6 @@ const SECTIONS_BY_SIZE = {
       })),
     },
   ],
-  4: [
-    {
-      kind: 'Parity',
-      title: 'Parity',
-      subtitle: 'Edge Flips',
-      groups: [{ group: PARITY_GROUP, cases: forSize(4, 'Parity') }],
-    },
-  ],
   2: [
     {
       kind: 'Ortega OLL',
@@ -147,6 +141,19 @@ const SECTIONS_BY_SIZE = {
     },
   ],
 };
+
+// Every big cube gets the same Parity section, differing only in which cases
+// exist at that size.
+for (const n of PARITY_SIZES) {
+  SECTIONS_BY_SIZE[n] = [
+    {
+      kind: 'Parity',
+      title: 'Parity',
+      subtitle: 'Edge Flips',
+      groups: [{ group: PARITY_GROUP, cases: forSize(n, 'Parity') }],
+    },
+  ];
+}
 
 /** The menu for a given cube size; empty for sizes with no library yet. */
 export function sectionsFor(n) {

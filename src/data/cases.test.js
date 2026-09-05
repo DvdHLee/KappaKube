@@ -54,6 +54,7 @@ describe('the library', () => {
       [3, 78],
       [2, 12],
       [4, 2],
+      [5, 1],
     ]) {
       const listed = sectionsFor(n).flatMap((s) => s.groups.flatMap((g) => g.cases));
       expect(listed, `${n}x${n}`).toHaveLength(expected);
@@ -63,7 +64,7 @@ describe('the library', () => {
   });
 
   it('offers no library for sizes that have none yet', () => {
-    expect(sectionsFor(5)).toEqual([]);
+    expect(sectionsFor(6)).toEqual([]);
   });
 
   it('gives every case at least one algorithm and a setup', () => {
@@ -365,74 +366,135 @@ describe('algorithm variants', () => {
 });
 
 /**
- * The 4x4 parity cases.
+ * Big-cube parity.
  *
  * Big-cube notation is ambiguous — `r` means the inner slice in some listings
  * and a wide turn in others, and the two readings give completely different
  * results. So rather than trust the spelling, each case is checked to be the
  * parity it claims: which stickers are wrong, and on which kind of piece.
  */
-describe('4x4 parity', () => {
-  const parity = CASES.filter((c) => c.n === 4);
-
+describe('big-cube parity', () => {
   /** Stickers not showing their own colour, tagged by the piece they sit on. */
   const wrongStickers = (cube) => {
+    const outer = cube.n - 1;
     const out = [];
     for (const cubie of cube.cubies) {
       for (const local in cubie.stickers) {
         const face = worldFaceOf(cubie, local);
         if (cubie.stickers[local] === face) continue;
-        const outerCount = cubie.pos.filter((v) => Math.abs(v) === 3).length;
+        const edges = cubie.pos.filter((v) => Math.abs(v) === outer).length;
+        const midge = edges === 2 && cubie.pos.includes(0);
         out.push({
           slot: cubie.pos.join(','),
-          kind: outerCount === 3 ? 'corner' : outerCount === 2 ? 'wing' : 'centre',
+          kind: edges === 3 ? 'corner' : edges === 2 ? (midge ? 'midge' : 'wing') : 'centre',
         });
       }
     }
     return out;
   };
 
-  it('has both cases', () => {
-    expect(parity.map((c) => c.id).sort()).toEqual(['PAR-OLL', 'PAR-PLL']);
+  it('offers the cases each size can actually reach', () => {
+    expect(
+      CASES.filter((c) => c.n === 4)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(['PAR4-OLL', 'PAR4-PLL']);
+    // A 5x5 has no PLL parity — see the test below for why.
+    expect(CASES.filter((c) => c.n === 5).map((c) => c.id)).toEqual(['PAR5-OLL']);
   });
 
-  it('every algorithm solves its case', () => {
-    for (const testCase of parity) {
+  it.each([4, 5])('every %ix%i algorithm solves its case', (n) => {
+    for (const testCase of CASES.filter((c) => c.n === n)) {
       for (const alg of testCase.algs) {
-        const state = stateForAlg(alg, 4);
-        expect(isSolved(applyAlg(state, parseAlg(alg, 4))), `${testCase.id}: ${alg}`).toBe(true);
+        const state = stateForAlg(alg, n);
+        expect(isSolved(applyAlg(state, parseAlg(alg, n))), `${testCase.id}: ${alg}`).toBe(true);
       }
     }
   });
 
-  it('leaves corners and centres alone — only wings are out of place', () => {
-    for (const testCase of parity) {
-      const wrong = wrongStickers(stateForAlg(testCase.algs[0], 4));
+  it.each([4, 5])('%ix%i parity leaves corners, midges and centres alone', (n) => {
+    for (const testCase of CASES.filter((c) => c.n === n)) {
+      const wrong = wrongStickers(stateForAlg(testCase.algs[0], n));
       expect(
         wrong.every((w) => w.kind === 'wing'),
-        testCase.id,
+        `${testCase.id}: ${JSON.stringify(wrong)}`,
       ).toBe(true);
     }
   });
 
-  it('OLL parity is one dedge flipped', () => {
-    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR-OLL').algs[0], 4));
+  it('4x4 OLL parity is one dedge flipped', () => {
+    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR4-OLL').algs[0], 4));
     // Both wings of a single dedge, each showing its two colours the wrong way.
     expect(wrong).toHaveLength(4);
     expect(new Set(wrong.map((w) => w.slot)).size).toBe(2);
   });
 
-  it('PLL parity is two dedges swapped', () => {
-    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR-PLL').algs[0], 4));
+  it('4x4 PLL parity is two dedges swapped', () => {
+    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR4-PLL').algs[0], 4));
     // Four wings, one wrong sticker each: their top facelets still match, only
     // the side colours have traded places.
     expect(wrong).toHaveLength(4);
     expect(new Set(wrong.map((w) => w.slot)).size).toBe(4);
   });
 
-  it('the two cases are different from each other', () => {
-    const [a, b] = parity.map((c) => stateForAlg(c.algs[0], 4));
-    expect(JSON.stringify(a.cubies)).not.toBe(JSON.stringify(b.cubies));
-    expect(isSolved(solvedCube(4))).toBe(true);
+  it('5x5 OLL parity flips an edge without touching its middle piece', () => {
+    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR5-OLL').algs[0], 5));
+    expect(wrong).toHaveLength(4);
+    expect(new Set(wrong.map((w) => w.slot)).size).toBe(2);
+    expect(wrong.every((w) => w.kind === 'wing')).toBe(true);
+  });
+
+  /**
+   * Why the 5x5 needs no PLL parity algorithm.
+   *
+   * Its corners and middle edges behave exactly like a 3x3 — a face turn
+   * induces a face turn, a middle slice induces a slice — so the reduced puzzle
+   * is always in a legal 3x3 state, and a two-edge swap is not one of those.
+   */
+  it('a 5x5 always reduces to a legal 3x3, so PLL parity cannot arise', () => {
+    const n = 5;
+    const outer = n - 1;
+    const solvedFive = solvedCube(n);
+    const isCorner = (p) => p.filter((v) => Math.abs(v) === outer).length === 3;
+    const isMidge = (p) => p.filter((v) => Math.abs(v) === outer).length === 2 && p.includes(0);
+
+    const sign = (perm) => {
+      let swaps = 0;
+      for (let i = 0; i < perm.length; i++) {
+        for (let j = i + 1; j < perm.length; j++) if (perm[i] > perm[j]) swaps++;
+      }
+      return swaps % 2 === 0 ? 1 : -1;
+    };
+    const parityOf = (cube, pick) => {
+      const chosen = solvedFive.cubies.filter((c) => pick(c.pos));
+      const home = new Map(chosen.map((c, i) => [c.id, i]));
+      const byPos = new Map(cube.cubies.map((c) => [c.pos.join(','), c]));
+      return sign(chosen.map((c) => home.get(byPos.get(c.pos.join(',')).id)));
+    };
+
+    // Deterministic sequences, including a 4x4-style parity algorithm, which
+    // would be the obvious way to smuggle an illegal state in.
+    //
+    // Face and wide turns only. They generate the whole group — a lone inner
+    // slice is just Rw followed by R' — while leaving the six true face centres
+    // where they are. A slice turn would rotate those, reorienting the frame
+    // this comparison is measured against and making it meaningless.
+    let seed = 7;
+    const rand = (max) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % max;
+    };
+    const tokens = ['U', 'R', 'F', 'D', 'L', 'B', 'Rw', 'Uw', 'Fw', 'Lw', 'Dw', 'Bw'];
+    const suffixes = ['', "'", '2'];
+
+    for (let trial = 0; trial < 60; trial++) {
+      const text = Array.from(
+        { length: 30 },
+        () => tokens[rand(tokens.length)] + suffixes[rand(suffixes.length)],
+      ).join(' ');
+      let cube = applyAlg(solvedFive, parseAlg(text, n));
+      if (trial % 3 === 0) cube = applyAlg(cube, parseAlg('2R2 U2 2R2 Uw2 2R2 Uw2 U2', n));
+      expect(parityOf(cube, isCorner), text).toBe(parityOf(cube, isMidge));
+    }
   });
 });

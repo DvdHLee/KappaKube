@@ -3,7 +3,7 @@ import { COLOR_NAMES, validFronts } from '../core/scheme.js';
 import { useCubeStore } from '../state/useCubeStore.js';
 import { usePrefsStore } from '../state/usePrefsStore.js';
 import Segmented from './Segmented.jsx';
-import { useClearCase } from './useLoadCase.js';
+import { useEnterFreeplay } from './useFreeplay.js';
 
 const VIEW_OPTIONS = [
   { value: 'iso', label: 'Iso', title: 'Snap back to the standard angle' },
@@ -19,6 +19,7 @@ const SIZE_OPTIONS = [
   { value: '2', label: '2x2' },
   { value: '3', label: '3x3' },
   { value: '4', label: '4x4' },
+  { value: '5', label: '5x5' },
 ];
 
 const swatches = (names) =>
@@ -26,7 +27,6 @@ const swatches = (names) =>
 
 export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotate }) {
   const n = useCubeStore((s) => s.n);
-  const setCubeSize = useCubeStore((s) => s.setSize);
   const shuffle = useCubeStore((s) => s.shuffle);
   const busy = useCubeStore((s) => s.current !== null);
 
@@ -36,6 +36,7 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
   const setFront = usePrefsStore((s) => s.setFront);
   const setPrefSize = usePrefsStore((s) => s.setSize);
   const selectCase = usePrefsStore((s) => s.selectCase);
+  const enterFreeplay = useEnterFreeplay();
   const theme = usePrefsStore((s) => s.theme);
   const setTheme = usePrefsStore((s) => s.setTheme);
   const setupOpen = usePrefsStore((s) => s.setupOpen);
@@ -44,12 +45,13 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
   const changeSize = (value) => {
     const size = Number(value);
     setPrefSize(size);
-    setCubeSize(size);
-    selectCase(null);
+    // Each size keeps its own free cube, so switching brings that one back
+    // rather than handing over a solved one.
+    enterFreeplay(size);
     onView('iso');
   };
 
-  const freeplay = useClearCase();
+  const freeplay = () => enterFreeplay(n);
 
   const scramble = () => {
     selectCase(null);

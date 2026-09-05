@@ -3,6 +3,7 @@ import { parseAlg } from '../core/notation.js';
 import { invertAlg } from '../core/moves.js';
 import { useCubeStore } from '../state/useCubeStore.js';
 import { usePrefsStore } from '../state/usePrefsStore.js';
+import { useEnterFreeplay } from './useFreeplay.js';
 
 /**
  * Which algorithm a case should use: the remembered choice, or the first.
@@ -37,17 +38,14 @@ export function useLoadCase() {
 }
 
 /**
- * Drop the loaded case and go back to a solved cube.
+ * Drop the loaded case and go back to free play.
  *
- * Shared by the Freeplay button and by clicking the case that is already
- * loaded, so "no case" means the same thing however you get there.
+ * Kept as a thin wrapper over useEnterFreeplay so the Freeplay button and
+ * clicking the loaded case behave identically — both hand back the cube the
+ * user left, rather than one of them solving it.
  */
 export function useClearCase() {
-  const reset = useCubeStore((s) => s.reset);
-  const selectCase = usePrefsStore((s) => s.selectCase);
-
-  return useCallback(() => {
-    selectCase(null);
-    reset();
-  }, [reset, selectCase]);
+  const n = useCubeStore((s) => s.n);
+  const enterFreeplay = useEnterFreeplay();
+  return useCallback(() => enterFreeplay(n), [enterFreeplay, n]);
 }

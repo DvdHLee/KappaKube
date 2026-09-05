@@ -56,6 +56,16 @@ export const usePrefsStore = create(
       /** Which page the phone pager is showing. */
       page: 0,
 
+      /** Whether a drag on the cube turns a layer rather than moving the camera. */
+      locked: false,
+
+      /**
+       * The freeplay cube, kept per size so switching between a 3x3 and a 5x5
+       * does not lose either. Serialised; see src/core/serialize.js.
+       * @type {Record<number, object>}
+       */
+      freeplay: {},
+
       setTop(top) {
         // Changing the top can orphan the front — a colour cannot face front if
         // it is now on top or on the bottom. Pick the nearest valid one instead
@@ -73,7 +83,7 @@ export const usePrefsStore = create(
         // A case belongs to one cube size, so a stored selection stops making
         // sense the moment the size changes.
         const id = get().selectedCaseId ?? '';
-        const prefixes = { 2: /^OR-/, 3: /^(OLL|PLL)-/, 4: /^PAR-/ };
+        const prefixes = { 2: /^OR-/, 3: /^(OLL|PLL)-/, 4: /^PAR4-/, 5: /^PAR5-/ };
         const stillValid = prefixes[size]?.test(id) ?? false;
         set({ size, selectedCaseId: stillValid ? id : null });
       },
@@ -123,6 +133,15 @@ export const usePrefsStore = create(
 
       setPage(page) {
         set({ page });
+      },
+
+      setLocked(locked) {
+        set({ locked });
+      },
+
+      rememberFreeplay(n, state) {
+        if (!state) return;
+        set({ freeplay: { ...get().freeplay, [n]: state } });
       },
     }),
     {
