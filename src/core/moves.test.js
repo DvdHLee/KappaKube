@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createSolvedCube,
-  cubesEqual,
-  isSolved,
-  sameVisibleState,
-  worldFaceOf,
-} from './cube.js';
+import { createSolvedCube, cubesEqual, isSolved, sameVisibleState, worldFaceOf } from './cube.js';
 import { applyAlg, invertAlg, normalizeAmount, repeatAlg, rotationMatrix } from './moves.js';
 import { parseAlg } from './notation.js';
 
@@ -67,9 +61,7 @@ describe('rotationMatrix', () => {
 describe('turn direction', () => {
   it('U carries the URF corner to ULF with its F sticker facing L', () => {
     const after = state('U');
-    const urf = solved().cubies.find(
-      (c) => c.pos[0] === 2 && c.pos[1] === 2 && c.pos[2] === 2,
-    ).id;
+    const urf = solved().cubies.find((c) => c.pos[0] === 2 && c.pos[1] === 2 && c.pos[2] === 2).id;
     const moved = after.cubies.find((c) => c.id === urf);
 
     expect(moved.pos).toEqual([-2, 2, 2]); // U, F, L
@@ -79,9 +71,7 @@ describe('turn direction', () => {
 
   it('R carries the FR edge to UR with its F sticker facing U', () => {
     const after = state('R');
-    const fr = solved().cubies.find(
-      (c) => c.pos[0] === 2 && c.pos[1] === 0 && c.pos[2] === 2,
-    ).id;
+    const fr = solved().cubies.find((c) => c.pos[0] === 2 && c.pos[1] === 0 && c.pos[2] === 2).id;
     const moved = after.cubies.find((c) => c.id === fr);
 
     expect(moved.pos).toEqual([2, 2, 0]);
@@ -107,7 +97,7 @@ describe('move orders', () => {
 });
 
 describe('known algorithm orders', () => {
-  it('sexy move (R U R\' U\') has order 6', () => {
+  it("sexy move (R U R' U') has order 6", () => {
     expect(isIdentity("(R U R' U')5")).toBe(false);
     expect(isIdentity("(R U R' U')6")).toBe(true);
   });
@@ -176,15 +166,15 @@ describe('rotations and slices', () => {
     }
   });
 
-  it('x = R M\' L\'', () => {
+  it("x = R M' L'", () => {
     expect(cubesEqual(state('x'), state("R M' L'"))).toBe(true);
   });
 
-  it('y = U E\' D\'', () => {
+  it("y = U E' D'", () => {
     expect(cubesEqual(state('y'), state("U E' D'"))).toBe(true);
   });
 
-  it('z = F S B\'', () => {
+  it("z = F S B'", () => {
     expect(cubesEqual(state('z'), state("F S B'"))).toBe(true);
   });
 
@@ -193,12 +183,12 @@ describe('rotations and slices', () => {
     expect(cubesEqual(state('M'), state("L' x' R"))).toBe(true);
   });
 
-  it('a wide turn is the face plus the slice: Rw = R M\'', () => {
+  it("a wide turn is the face plus the slice: Rw = R M'", () => {
     expect(cubesEqual(state('Rw'), state("R M'"))).toBe(true);
     expect(cubesEqual(state('r'), state("R M'"))).toBe(true);
   });
 
-  it('x = Rw L\'', () => {
+  it("x = Rw L'", () => {
     expect(cubesEqual(state('x'), state("Rw L'"))).toBe(true);
   });
 });

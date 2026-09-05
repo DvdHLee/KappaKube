@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { createSolvedCube, latticeToWorld } from '../core/cube.js';
+import { AXIS_INDEX, latticeToWorld } from '../core/cube.js';
 import { SPACING } from '../theme.js';
 import { cubieGeometryFor, cubieMaterial } from './geometry.js';
 
@@ -21,35 +21,61 @@ function quaternionFromMat3(rot) {
 }
 
 /**
- * One <group> per cubie, holding a single stickerless mesh.
+ * One <group> per cubie.
  *
- * The group wrapper is deliberate: in Phase 3 a turn reparents the affected
- * groups under a pivot and rotates the pivot, so nothing in here changes when
- * animation lands.
+ * `dispose={null}` matters: geometries and materials here are module-level
+ * singletons shared by every cubie and cached across the app's lifetime, and
+ * pieces unmount and remount as they move in and out of the turning pivot. Left
+ * to its default, R3F would dispose those shared GPU resources on unmount.
  */
 function Cubie({ pos, rot, stickers }) {
   const [x, y, z] = latticeToWorld(pos, SPACING);
 
   return (
     <group position={[x, y, z]} quaternion={quaternionFromMat3(rot)}>
-      <mesh geometry={cubieGeometryFor(stickers)} material={cubieMaterial} />
+      <mesh geometry={cubieGeometryFor(stickers)} material={cubieMaterial} dispose={null} />
     </group>
   );
 }
 
 /**
- * Renders any cube state. Falls back to solved when no state is supplied, which
- * is all Phase 2 needs.
+ * Renders a cube state, with the pieces of any in-flight turn parented under a
+ * pivot group that the animator rotates.
+ *
+ * The split is declarative — React owns the scene graph, so there is no
+ * imperative `attach()` to fight the reconciler — and it changes only at move
+ * boundaries, not per frame.
+ *
+ * Crucially, cubie transforms always come straight from the model. The animator
+ * writes only the pivot's rotation, never a piece's own position or orientation,
+ * so the mesh cannot drift out of sync with the model: there is nothing to
+ * re-sync, because nothing was ever overwritten.
  */
-export default function CubeMesh({ n = 3, cube }) {
-  const solved = useMemo(() => createSolvedCube(n), [n]);
-  const model = cube ?? solved;
+export default function CubeMesh({ cube, current, pivotRef }) {
+  const { stationary, turning } = useMemo(() => {
+    if (!current) return { stationary: cube.cubies, turning: [] };
+
+    const axisIndex = AXIS_INDEX[current.move.axis];
+    const layers = new Set(current.move.layers);
+    const stationary = [];
+    const turning = [];
+    for (const cubie of cube.cubies) {
+      (layers.has(cubie.pos[axisIndex]) ? turning : stationary).push(cubie);
+    }
+    return { stationary, turning };
+  }, [cube, current]);
 
   return (
     <group>
-      {model.cubies.map((c) => (
+      {stationary.map((c) => (
         <Cubie key={c.id} pos={c.pos} rot={c.rot} stickers={c.stickers} />
       ))}
+
+      <group ref={pivotRef}>
+        {turning.map((c) => (
+          <Cubie key={c.id} pos={c.pos} rot={c.rot} stickers={c.stickers} />
+        ))}
+      </group>
     </group>
   );
 }

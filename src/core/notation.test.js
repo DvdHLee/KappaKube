@@ -88,15 +88,15 @@ describe('grouping', () => {
   });
 
   it('nests groups', () => {
-    expect(same("((R U)2 D)2", 'R U R U D R U R U D')).toBe(true);
+    expect(same('((R U)2 D)2', 'R U R U D R U R U D')).toBe(true);
   });
 
-  it('expands a commutator [A, B] to A B A\' B\'', () => {
+  it("expands a commutator [A, B] to A B A' B'", () => {
     expect(same('[R, U]', "R U R' U'")).toBe(true);
     expect(same("[R U R', D2]", "R U R' D2 R U' R' D2")).toBe(true);
   });
 
-  it('expands a conjugate [A: B] to A B A\'', () => {
+  it("expands a conjugate [A: B] to A B A'", () => {
     expect(same('[R: U]', "R U R'")).toBe(true);
   });
 

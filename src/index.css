@@ -5,6 +5,7 @@
   --panel: rgba(255, 255, 255, 0.05);
   --panel-hover: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.09);
+  --rail: rgba(15, 15, 19, 0.85);
   color-scheme: dark;
 }
 
@@ -22,71 +23,93 @@ body,
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
+/* --- layout --------------------------------------------------------------- */
+
 .app {
-  position: relative;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 176px;
   height: 100%;
-  /* Subtle vignette so the cube sits in a space rather than on a flat field. */
-  background: radial-gradient(ellipse at 50% 42%, #17171d 0%, var(--bg) 62%);
+  background: radial-gradient(ellipse at 55% 42%, #17171d 0%, var(--bg) 62%);
 }
 
-.app canvas {
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--rail);
+  backdrop-filter: blur(14px);
+}
+
+.rail--left {
+  border-right: 1px solid var(--border);
+}
+
+.rail--right {
+  border-left: 1px solid var(--border);
+  padding: 16px 12px;
+  gap: 10px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.stage-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.stage-canvas canvas {
   display: block;
   touch-action: none;
 }
 
+/* --- shared bits ---------------------------------------------------------- */
+
 .brand {
-  position: absolute;
-  top: 22px;
-  left: 24px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  pointer-events: none;
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .brand-mark {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-.brand-sub {
+.panel-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 11px;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.panel-note {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
   color: var(--muted);
-}
-
-.hud {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(16, 16, 20, 0.72);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  max-width: calc(100vw - 32px);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.hud-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .hud-label {
@@ -94,34 +117,546 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 0 6px 0 2px;
+  min-width: 38px;
 }
 
-.hud-sep {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border);
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .hud-btn {
   appearance: none;
   border: 0;
-  border-radius: 9px;
-  padding: 7px 12px;
+  border-radius: 8px;
+  padding: 6px 10px;
   font: inherit;
   font-size: 12px;
   font-weight: 500;
   color: var(--fg);
   background: var(--panel);
   cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
-.hud-btn:hover {
+.hud-btn:hover:not(:disabled) {
   background: var(--panel-hover);
+}
+
+.hud-btn:disabled {
+  opacity: 0.32;
+  cursor: default;
 }
 
 .hud-btn.is-active {
   background: var(--fg);
   color: #101014;
+}
+
+.hud-btn--primary {
+  background: var(--fg);
+  color: #101014;
+  min-width: 62px;
+}
+
+/* --- left rail: setup ----------------------------------------------------- */
+
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.setup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- left rail: algorithm menu -------------------------------------------- */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.menu-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.menu-search {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+}
+
+.menu-search:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* --- segmented three-way toggles ------------------------------------------ */
+
+.segmented-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented {
+  --pad: 2px;
+  --gap: 2px;
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: var(--pad);
+  gap: var(--gap);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--border);
+}
+
+/*
+ * The travelling highlight. One segment wide, moved by whole segments plus the
+ * gaps between them — translateX percentages resolve against the thumb's own
+ * width, which is exactly one segment.
+ */
+.segmented-thumb {
+  position: absolute;
+  top: var(--pad);
+  bottom: var(--pad);
+  left: var(--pad);
+  width: calc((100% - 2 * var(--pad) - (var(--count) - 1) * var(--gap)) / var(--count));
+  border-radius: 6px;
+  background: var(--fg);
+  transform: translateX(calc(var(--index) * (100% + var(--gap))));
+  transition: transform 0.24s cubic-bezier(0.32, 0.72, 0.3, 1);
+}
+
+.segment {
+  position: relative; /* above the thumb */
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.18s ease;
+}
+
+.segment:hover {
+  color: var(--fg);
+}
+
+.segment.is-active,
+.segment.is-active:hover {
+  color: #101014;
+  font-weight: 600;
+}
+
+/*
+ * Swatch mode: the colour is the label, so the thumb becomes a ring that slides
+ * around the chosen chip rather than a fill behind it. The chip is inset so the
+ * ring, which sits underneath, shows around its edge.
+ */
+.segmented--swatch .segment {
+  padding: 4px;
+}
+
+.segmented--swatch .segment-chip {
+  display: block;
+  width: 100%;
+  height: 15px;
+  border-radius: 4px;
+}
+
+.segmented--swatch .segmented-thumb {
+  background: none;
+  border: 2px solid var(--fg);
+  border-radius: 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-thumb {
+    transition: none;
+  }
+}
+
+.hud-btn--wide {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.menu-filter,
+.algbar-done {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.menu-filter input,
+.algbar-done input,
+.menu-check {
+  accent-color: #21b36b;
+  cursor: pointer;
+  margin: 0;
+}
+
+.menu-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px 24px;
+}
+
+.menu-empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 12px 6px;
+}
+
+.menu-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 6px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.menu-group {
+  margin-bottom: 8px;
+}
+
+.menu-group-title {
+  margin: 8px 6px 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  border-radius: 7px;
+}
+
+.menu-row:hover {
+  background: var(--panel);
+}
+
+.menu-row.is-selected {
+  background: var(--panel-hover);
+  box-shadow: inset 2px 0 0 var(--fg);
+}
+
+.menu-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-name {
+  font-size: 12px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- recognition diagrams -------------------------------------------------- */
+
+.diagram {
+  display: block;
+  flex: none;
+  /* A hairline ring keeps the pale top colour off the panel background. */
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 1px;
+}
+
+.algbar-diagram {
+  padding: 2px;
+  border-radius: 6px;
+}
+
+/* --- stage: algorithm bar ------------------------------------------------- */
+
+.algbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 18px 20px 12px;
+  min-height: 92px;
+}
+
+.algbar.is-empty {
+  justify-content: center;
+}
+
+.algbar-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.algbar-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.algbar-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  opacity: 0.75;
+}
+
+.algbar-group {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.algbar-variants {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  max-width: min(760px, 100%);
+}
+
+.variant {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px 9px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.variant:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.variant:disabled {
+  cursor: default;
+}
+
+.variant.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.algbar-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.algbar-move {
+  border: 0;
+  border-radius: 7px;
+  padding: 4px 9px;
+  background: var(--panel);
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.algbar-move:hover:not(:disabled) {
+  background: var(--panel-hover);
+  color: var(--fg);
+}
+
+.algbar-move:disabled {
+  cursor: default;
+}
+
+.algbar-move.is-done {
+  color: var(--fg);
+}
+
+.algbar-move.is-next {
+  background: var(--fg);
+  color: #101014;
+  font-weight: 600;
+}
+
+/* --- stage: transport ----------------------------------------------------- */
+
+.transport {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 20px;
+}
+
+.transport-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transport-speed {
+  width: min(340px, 100%);
+}
+
+.transport-speed input[type='range'] {
+  flex: 1;
+  accent-color: var(--fg);
+}
+
+.transport-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 54px;
+  text-align: right;
+}
+
+/* --- right rail: move pad ------------------------------------------------- */
+
+.movepad {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Two columns: a move and its inverse sit side by side on each row. */
+.movepad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding-bottom: 6px;
+}
+
+.movepad-grid + .movepad-grid {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.hud-btn--move {
+  padding: 8px 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* --- narrow screens ------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .app {
+    grid-template-columns: 260px minmax(0, 1fr) 152px;
+  }
+}
+
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(320px, 1fr) auto auto;
+    overflow-y: auto;
+  }
+
+  .rail {
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .rail--right {
+    order: 3;
+  }
+
+  .rail--left {
+    order: 2;
+    max-height: 60vh;
+  }
+
+  .stage {
+    order: 1;
+  }
+
+  .movepad-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .movepad {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }

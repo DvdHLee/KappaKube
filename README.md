@@ -13,16 +13,16 @@ npm run dev      # http://localhost:5173
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Vite dev server with HMR |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Serve the production build locally |
-| `npm test` | Run the core test suite once |
-| `npm run test:watch` | Watch mode |
-| `npm run coverage` | Coverage report for `src/core` |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier, write |
+| Script               | What it does                       |
+| -------------------- | ---------------------------------- |
+| `npm run dev`        | Vite dev server with HMR           |
+| `npm run build`      | Production build to `dist/`        |
+| `npm run preview`    | Serve the production build locally |
+| `npm test`           | Run the core test suite once       |
+| `npm run test:watch` | Watch mode                         |
+| `npm run coverage`   | Coverage report for `src/core`     |
+| `npm run lint`       | ESLint                             |
+| `npm run format`     | Prettier, write                    |
 
 ## Layout
 

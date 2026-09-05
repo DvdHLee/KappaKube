@@ -3,52 +3,10 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import CubeMesh from './CubeMesh.jsx';
-import { BACKGROUND_COLOR, CUBIE_SIZE, SPACING } from '../theme.js';
-
-/** Half the cube's extent in world units — used to place the ground shadow. */
-export function cubeRadius(n) {
-  return ((n - 1) / 2) * SPACING + CUBIE_SIZE / 2;
-}
-
-export const FOV = 35;
-
-/**
- * Camera distance that frames a cube of size n with the given margin.
- *
- * Measured against the cube's bounding *sphere* (corner-to-corner), which
- * projects to the same radius from every angle — so the framing holds at any
- * orbit position and nothing ever clips. margin 1 exactly fills the frame
- * height; the default leaves the cube sitting comfortably inside it.
- */
-export function cameraDistance(n, margin = 1.4) {
-  const boundingRadius = cubeRadius(n) * Math.sqrt(3);
-  return (boundingRadius * margin) / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
-}
-
-/**
- * The one camera preset, as angles rather than raw components so it can be
- * tuned by eye. Azimuth swings from straight-on (+Z) toward the right face;
- * a true corner view would be 45 degrees, so this sits deliberately short of
- * that and reads as a front view with depth rather than a diagonal.
- */
-const ISO_AZIMUTH_DEG = 25;
-const ISO_ELEVATION_DEG = 22;
-
-const ISO_DIRECTION = (() => {
-  const az = THREE.MathUtils.degToRad(ISO_AZIMUTH_DEG);
-  const el = THREE.MathUtils.degToRad(ISO_ELEVATION_DEG);
-  return new THREE.Vector3(
-    Math.sin(az) * Math.cos(el),
-    Math.sin(el),
-    Math.cos(az) * Math.cos(el),
-  ).normalize();
-})();
-
-/** Camera position for the iso preset. Single source of truth for both the
- *  initial camera and the rig, so the starting view registers as the preset. */
-export function isoPosition(n) {
-  return ISO_DIRECTION.clone().multiplyScalar(cameraDistance(n));
-}
+import TurnAnimator from './TurnAnimator.jsx';
+import { useCubeStore } from '../state/useCubeStore.js';
+import { BACKGROUND_COLOR } from '../theme.js';
+import { FOV, ISO_DIRECTION, cameraDistance, cubeRadius, isoPosition } from './framing.js';
 
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
@@ -137,6 +95,9 @@ function Studio() {
 
 export default function Scene({ n, view, autoRotate, onActiveView }) {
   const radius = cubeRadius(n);
+  const pivotRef = useRef(null);
+  const cube = useCubeStore((s) => s.cube);
+  const current = useCubeStore((s) => s.current);
 
   return (
     <Canvas
@@ -148,7 +109,9 @@ export default function Scene({ n, view, autoRotate, onActiveView }) {
 
       <Studio />
 
-      <CubeMesh n={n} />
+      <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
+
+      <TurnAnimator pivotRef={pivotRef} />
 
       <ContactShadows
         position={[0, -radius - 0.02, 0]}

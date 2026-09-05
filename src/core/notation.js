@@ -51,6 +51,20 @@ function amountFor(face, turns) {
   return normalizeAmount(-FACE_SIGN[face] * turns);
 }
 
+/**
+ * Like amountFor, but keeps the sign of a half turn.
+ *
+ * normalizeAmount folds -2 into 2 because a half turn is its own inverse, which
+ * is right for the model and wrong for the animation: `R2` should visibly spin
+ * the way two clockwise quarter turns would, and `R2'` the other way. Purely a
+ * presentation hint — nothing in the model reads it.
+ */
+function spinFor(face, turns) {
+  const raw = -FACE_SIGN[face] * turns;
+  const folded = normalizeAmount(raw);
+  return folded === 2 && raw < 0 ? -2 : folded;
+}
+
 /** The `depth` outermost lattice coordinates measured in from `face`. */
 function layersFrom(face, depth, n) {
   const sign = FACE_SIGN[face];
@@ -201,10 +215,12 @@ class Scanner {
       if (prefix !== null) this.fail('A rotation cannot take a layer count', start);
       const axis = raw.toLowerCase();
       const turns = this.readModifier();
+      const follows = ROTATION_FOLLOWS[axis];
       return {
         axis,
         layers: allLayers(this.n),
-        amount: amountFor(ROTATION_FOLLOWS[axis], turns),
+        amount: amountFor(follows, turns),
+        spin: spinFor(follows, turns),
       };
     }
 
@@ -215,7 +231,12 @@ class Scanner {
       const layers = innerLayers(this.n);
       if (layers.length === 0) this.fail(`${upper} needs a cube larger than 2x2`, start);
       const turns = this.readModifier();
-      return { axis: FACE_AXIS[follows], layers, amount: amountFor(follows, turns) };
+      return {
+        axis: FACE_AXIS[follows],
+        layers,
+        amount: amountFor(follows, turns),
+        spin: spinFor(follows, turns),
+      };
     }
 
     if (!FACE_LETTERS.includes(upper)) {
@@ -245,7 +266,12 @@ class Scanner {
       layers = layersFrom(upper, 1, this.n);
     }
 
-    return { axis: FACE_AXIS[upper], layers, amount: amountFor(upper, turns) };
+    return {
+      axis: FACE_AXIS[upper],
+      layers,
+      amount: amountFor(upper, turns),
+      spin: spinFor(upper, turns),
+    };
   }
 }
 
@@ -300,7 +326,9 @@ export function formatMove(move, n = 3) {
   // slice
   const inner = innerLayers(n);
   if (inner.length > 0 && sameLayers(layers, inner)) {
-    const letter = Object.keys(SLICE_FOLLOWS).find((k) => FACE_AXIS[SLICE_FOLLOWS[k]] === move.axis);
+    const letter = Object.keys(SLICE_FOLLOWS).find(
+      (k) => FACE_AXIS[SLICE_FOLLOWS[k]] === move.axis,
+    );
     const turns = normalizeAmount(-FACE_SIGN[SLICE_FOLLOWS[letter]] * amount);
     return letter + modifierSuffix(turns);
   }

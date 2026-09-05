@@ -1,5 +1,4 @@
 // Single source of truth for the cube's look.
-// Swapping this object is how a colour-blind palette or an alternate scheme ships.
 
 export const COLORS = {
   white: '#F2F2F0',
@@ -11,30 +10,21 @@ export const COLORS = {
 };
 
 /**
- * Which colour sits on which face in the default orientation: white on the
- * bottom, red in front. Face letters are *positions*, not colours, so this is a
- * pure display concern — notation and the core model are untouched by it.
- *
- * This is a valid WCA-chirality cube (opposite pairs white/yellow, red/orange,
- * green/blue) and it is also the CFOP-friendly start: the cross colour is on D
- * and the OLL/PLL working face is the yellow U.
+ * Default orientation: white on the bottom, red in front. A valid WCA-chirality
+ * cube and the CFOP-friendly start — the cross colour is down and the OLL/PLL
+ * working face is the yellow U. The user can pick any of the 24 (see
+ * src/core/scheme.js); face letters stay positions, not colours, so notation is
+ * untouched by the choice.
  */
-export const FACE_ORIENTATION = {
-  U: 'yellow',
-  D: 'white',
-  F: 'red',
-  B: 'orange',
-  R: 'green',
-  L: 'blue',
-};
-
-export const FACE_COLORS = Object.fromEntries(
-  Object.entries(FACE_ORIENTATION).map(([face, name]) => [face, COLORS[name]]),
-);
+export const DEFAULT_TOP = 'yellow';
+export const DEFAULT_FRONT = 'red';
 
 // Stickerless cube: the piece is moulded in colour, so the only dark surfaces are
 // the inward-facing sides you glimpse through the seams.
 export const INTERIOR_COLOR = '#131317';
+
+/** Stickers not yet oriented, in an OLL recognition diagram. */
+export const UNORIENTED_COLOR = '#3f3f49';
 export const BACKGROUND_COLOR = '#0c0c10';
 
 // Geometry constants, in world units. Lattice spacing is always 1.

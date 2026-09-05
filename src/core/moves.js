@@ -81,7 +81,15 @@ export function applyAlg(cube, moves) {
 }
 
 export function invertMove(move) {
-  return { axis: move.axis, layers: move.layers, amount: normalizeAmount(-move.amount) };
+  const inverted = {
+    axis: move.axis,
+    layers: move.layers,
+    amount: normalizeAmount(-move.amount),
+  };
+  // `spin` is the animation-direction hint from the parser; carry it through
+  // inverted so a stepped-back half turn unwinds the way it wound.
+  if (move.spin !== undefined) inverted.spin = -move.spin;
+  return inverted;
 }
 
 /** Reverse the order and invert each move — the inverse of the whole sequence. */

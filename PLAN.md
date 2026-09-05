@@ -8,29 +8,26 @@
 
 ## 1. Stack decision
 
-| Concern | Choice | Why |
-|---|---|---|
-| Build | **Vite 8** + React 19 | Vercel zero-config, instant HMR. Never CRA. |
-| 3D | **three.js 0.185 + @react-three/fiber 9** | R3F is the only serious React↔three binding; it's a renderer, not a wrapper, so there's no perf tax and you can drop to raw three anywhere. |
-| 3D helpers | **@react-three/drei 10** | `OrbitControls`, `RoundedBox`, `Environment`, `ContactShadows`, `CameraControls`, `Bounds`. Saves weeks. |
-| Animation | **Hand-rolled in `useFrame`** (with `maath/easing` for damping) | See §3.3 — turn animation must be driven by a quaternion slerp on a pivot group, not by React state. A spring lib (`@react-spring/three`) fights the queue / step-through / scrub requirements. |
-| State | **zustand 5** | Cube state must be readable inside `useFrame` without re-rendering. zustand's `getState()` / transient subscriptions are built for exactly this. Redux/Context would re-render the tree every move. |
-| Scramble (later) | **`cubing`** (`randomScrambleForEvent`) | WCA-official random-*state* scrambles via WASM in a worker. Phase 6 upgrade — v1 uses random-move (see §6). |
-| Solver (future) | **`cubing/search`** in a Web Worker | Same lib, `solve()` / min2phase. Already a dep by then. |
-| Tests | **Vitest** | The cube math is pure JS and *must* be unit-tested; bugs there are invisible until an alg silently mis-renders. |
+| Concern          | Choice                                                          | Why                                                                                                                                                                                                 |
+| ---------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build            | **Vite 8** + React 19                                           | Vercel zero-config, instant HMR. Never CRA.                                                                                                                                                         |
+| 3D               | **three.js 0.185 + @react-three/fiber 9**                       | R3F is the only serious React↔three binding; it's a renderer, not a wrapper, so there's no perf tax and you can drop to raw three anywhere.                                                         |
+| 3D helpers       | **@react-three/drei 10**                                        | `OrbitControls`, `RoundedBox`, `Environment`, `ContactShadows`, `CameraControls`, `Bounds`. Saves weeks.                                                                                            |
+| Animation        | **Hand-rolled in `useFrame`** (with `maath/easing` for damping) | See §3.3 — turn animation must be driven by a quaternion slerp on a pivot group, not by React state. A spring lib (`@react-spring/three`) fights the queue / step-through / scrub requirements.     |
+| State            | **zustand 5**                                                   | Cube state must be readable inside `useFrame` without re-rendering. zustand's `getState()` / transient subscriptions are built for exactly this. Redux/Context would re-render the tree every move. |
+| Scramble (later) | **`cubing`** (`randomScrambleForEvent`)                         | WCA-official random-_state_ scrambles via WASM in a worker. Phase 6 upgrade — v1 uses random-move (see §6).                                                                                         |
+| Solver (future)  | **`cubing/search`** in a Web Worker                             | Same lib, `solve()` / min2phase. Already a dep by then.                                                                                                                                             |
+| Tests            | **Vitest**                                                      | The cube math is pure JS and _must_ be unit-tested; bugs there are invisible until an alg silently mis-renders.                                                                                     |
 
 Versions verified against npm on 2026-09-04: `three@0.185.1`, `@react-three/fiber@9.7.0`
 (peers: react `>=19 <19.3`, three `>=0.156`), `@react-three/drei@10.7.8`, `zustand@5.0.15`,
 `vite@8.2.2`, `react@19.2.8`, `cubing@0.63.4`. Local toolchain: Node 24.18, npm 11.16.
 
-### On JS vs TS
+### On JS vs TS — decided: JS with JSDoc types
 
-The project is specified as React JS, so the plan is JS. One caveat worth recording: the cube
-model is dense index math (axes, layer depths, orientation matrices) where a typo compiles fine
-and produces a subtly wrong cube. Recommended compromise — write `src/core/**` in TypeScript even
-if the UI stays JS (Vite supports mixing per-file with zero config). If staying pure JS, use JSDoc
-`@typedef` annotations in core so the editor still catches it. **Open decision.** Nothing else in
-this plan is affected either way.
+The project is specified as React JS, so it is JS throughout. `src/core/**` carries JSDoc
+`@typedef` annotations (`Vec3`, `Mat3`, `Cubie`, `Cube`, `Move`) so the editor still catches
+mistakes in the dense index maths, where a typo compiles fine and produces a subtly wrong cube.
 
 ---
 
@@ -47,13 +44,20 @@ Source of truth is a **cubie list**, not a 54-sticker array:
 cubie = {
   id: 7,                        // stable identity, index into solved layout
   pos: [x, y, z],               // integer slot coords
-  rot: [x, y, z, w]             // orientation quaternion, always one of the 24 cube rotations
+  rot: [9 ints],                // orientation: row-major 3x3, local -> world
+  stickers: { U: 'U', R: 'R' }, // local direction -> colour; immutable per piece
 }
 cube = { n: 3, cubies: [...] }
 ```
 
+**Orientation is an integer matrix, not a quaternion** (a change from the first draft). Every
+cubie orientation is one of the 24 cube rotations, whose matrices have entries in {-1, 0, 1} — so
+composition is exact integer arithmetic with no drift and no epsilon comparisons, however many
+moves are applied. The quaternions for those same rotations need irrational components. The
+renderer converts to a quaternion at the boundary, the only place floats are wanted.
+
 Why cubie-level rather than facelets: it maps 1:1 onto the render (each cubie is one `<group>`),
-generalises to any N with no new code, and makes a move a *pure rotation of a coordinate subset* —
+generalises to any N with no new code, and makes a move a _pure rotation of a coordinate subset_ —
 no per-size permutation tables to hand-write and get wrong.
 
 Facelets are **derived** on demand (§7), not stored.
@@ -61,15 +65,25 @@ Facelets are **derived** on demand (§7), not stored.
 ### 2.2 Moves
 
 ```js
-move = { axis: 'x'|'y'|'z', layers: [1, 2], amount: 1 }  // amount: 1=CW, -1=CCW, 2=180°
+move = {
+  axis: 'x' | 'y' | 'z',
+  layers: [2, 0], // lattice coordinates, not indices - exact integer selection
+  amount: 1, // quarter turns about the POSITIVE axis, right-hand rule
+  spin: 1, // optional: the same, but keeps the sign of a half turn
+};
 ```
+
+`amount` is canonicalised to {-1, 1, 2}, which folds -2 into 2 because a half turn is its own
+inverse. That is right for the model and wrong for the animation: `R2` should visibly spin the way
+two clockwise quarter turns would, and `R2'` the other way. `spin` carries that direction as a
+presentation hint that the model itself ignores.
 
 Applying a move = for each cubie whose coord on `axis` is in `layers`: rotate `pos` about the axis
 and compose `rot`. Nine lines of code, size-agnostic.
 
 **Sign convention to lock down on day one** (get this wrong and every algorithm is mirrored):
-faces are *positions* — U is +Y, F is +Z, R is +X, regardless of which colour is painted there
-(see §3.2). A clockwise turn *viewed from outside that face* is a **negative** right-hand rotation
+faces are _positions_ — U is +Y, F is +Z, R is +X, regardless of which colour is painted there
+(see §3.2). A clockwise turn _viewed from outside that face_ is a **negative** right-hand rotation
 about the positive axis for U/R/F, and a **positive** one for D/L/B. Encode this once in a table,
 never inline.
 
@@ -80,17 +94,30 @@ Bidirectional. Parse → `move[]`, and `move[]` → canonical string.
 - Faces `U D L R F B`, modifiers `'` and `2`
 - Wide: `Rw`, `r`, and NxN prefix `3Rw`
 - Slices `M E S`, rotations `x y z`
-- Whitespace / comma tolerant; parentheses + repeat `(R U R' U')3` (also gives commutator /
-  conjugate notation `[R, U]` cheaply later)
+- Whitespace / comma tolerant; parentheses + repeat `(R U R' U')3`, invertible as `(R U)'`
+- Commutator `[A, B]` = `A B A' B'` and conjugate `[A: B]` = `A B A'` — the recursive-descent
+  parser made these nearly free, so they shipped in Phase 1 rather than later
 - Errors carry a character offset so the UI can underline bad input
 
 **Tests that must pass before moving on:**
 
-- `(R U R' U')` ×6 = identity
-- T-perm `(R U R' U' R' F R2 U' R' U' R U R' F')` ×2 = identity
-- `M` ≡ `R L' x'` equivalence
-- `x y z` rotations leave the *solved* predicate true
+- `(R U R' U')` ×6 = identity; Sune ×6; T-perm and Y-perm ×2
+- `x` = `R M' L'`, `y` = `U E' D'`, `z` = `F S B'`, `Rw` = `R M'`
+- `M` = `L' x' R` — from `x = R M' L'`, prepending `R'` and appending `L` cancels adjacently.
+  (The first draft wrote this as `R L' x'`, which is wrong: `x` does not commute with `R`.)
+- `x y z` rotations leave the _solved_ predicate true
 - `parse(format(m)) === m` for all 18 basic moves
+- **A direction test that catches mirroring.** Order tests cannot: the mirror of an order-k
+  algorithm still has order k, so sexy / T-perm / Sune all pass under a flipped sign convention.
+  Only asserting where a specific sticker lands catches it — `U` must carry the URF corner to ULF
+  with its F sticker ending up on L.
+
+**Two notions of equality, and why both are needed.** Algorithms twist centres: a T-perm contains
+five U-layer moves and nets a quarter turn, so it leaves the U centre rotated. A centre has one
+sticker, so that twist is invisible on a normal cube. `sameVisibleState` compares what a viewer
+can actually see (colour per face per slot) and is the right test for "did this algorithm do
+nothing"; `cubesEqual` compares raw orientation too, which is the _supercube_ notion. Two T-perms
+are visibly solved but not `cubesEqual`; four are both.
 
 ---
 
@@ -121,7 +148,7 @@ This is where "clean" is won or lost. The spec:
   `roughness 0.45 / metalness 0 / clearcoat 0.4`. The light clearcoat reads as glossy moulded
   plastic; the rounding plus a soft env map is what reads "premium" rather than "programmer cube".
 - **How the colours get on:** `RoundedBoxGeometry` is non-indexed and inherits BoxGeometry's six
-  material groups, and it only *spherifies* the original box vertices — so each group still covers
+  material groups, and it only _spherifies_ the original box vertices — so each group still covers
   one face plus its half of every adjacent bevel. Colouring per group therefore puts the colour
   break exactly on the 45° edge line, which is how a real moulded piece looks. Those groups are
   baked into a vertex-colour attribute and cleared: **one draw call per cubie** instead of six.
@@ -148,13 +175,22 @@ Turning: scene → cubeRoot → pivot (empty Group) → [9 affected cubies]
                           → [17 untouched cubies]
 ```
 
-1. **Begin:** pop the affected cubies out of `cubeRoot` and `attach()` them to a fresh `pivot`
-   group (three's `attach` preserves world transform, so nothing visibly moves).
+**Built declaratively, not with `attach()`** (a refinement on the first draft). React renders the
+turning pieces _as children of the pivot group_, so React stays the sole owner of the scene graph
+and there is no imperative reparenting for the reconciler to trip over. The split changes only at
+move boundaries, never per frame.
+
+1. **Begin:** the store sets `current`, so `CubeMesh` re-renders with the affected pieces inside
+   `<group ref={pivotRef}>`. They keep their model transforms, so nothing visibly moves.
 2. **Animate:** each frame in `useFrame`, set `pivot.quaternion` to `angle * easing(t)` about the
-   axis. **No React state, no re-render** — one imperative quaternion write per frame.
-3. **End:** apply the move to the logical cube model, `attach()` the cubies back to `cubeRoot`,
-   then **snap** each cubie's position and quaternion to the exact lattice values from the model.
-   This "bake to model" step is what prevents float drift over thousands of moves.
+   axis. **No React state, no re-render** — one quaternion write per frame, zero allocations.
+3. **End:** the animator calls `finishTurn()`; the model advances and the pieces render back in
+   the root at exact lattice coordinates.
+
+**Why the mesh cannot drift out of sync:** the animator never writes a cubie's own position or
+orientation — only the pivot's rotation. Piece transforms come straight from the model on every
+render, so there is nothing to re-sync and no accumulated float error to correct. The "bake" is
+not a correction step; it falls out of the data flow.
 
 Easing: `easeOutCubic`-ish, or overshoot-free `easeInOutQuad` for algorithm playback. For a chained
 sequence, allow the next move to begin at ~85% of the previous one (configurable "flow") — this is
@@ -176,7 +212,7 @@ what makes alg playback look like a human rather than a metronome.
 - Preset buttons (Front / Back / Top-corner / Reset) animating via drei
   `CameraControls.setLookAt(..., true)`.
 - Auto-rotate toggle for an idle "hero" state.
-- Cube rotations `x/y/z` rotate the *cube model*, not the camera — keep those strictly distinct.
+- Cube rotations `x/y/z` rotate the _cube model_, not the camera — keep those strictly distinct.
 
 ---
 
@@ -185,11 +221,16 @@ what makes alg playback look like a human rather than a metronome.
 A small state machine in zustand, independent of the renderer:
 
 ```
-status:  'idle' | 'playing' | 'paused' | 'stepping'
+status:  'idle' | 'playing' | 'paused'
 queue:   Move[]        cursor: number
-speed:   ms per quarter-turn (slider 80–1200, default ~280)
-history: Move[]        // enables undo + full sequence notation
+current: { move, direction } | null   // the turn being animated, or nothing
+speed:   ms per quarter-turn (slider 60-1200, default 280)
 ```
+
+**One list, not two.** `queue` is the whole timeline, past and future; `cursor` is how many of its
+moves have been applied. That removes the separate `history` from the first draft and with it the
+risk of the two disagreeing. `current` changes at most once per move and never per frame, so a
+turn costs zero React renders while it plays.
 
 API: `enqueue(alg)`, `play()`, `pause()`, `stepForward()`, `stepBack()` (applies the inverse),
 `jumpTo(i)` (instant, no animation), `reset()`, `setSpeed()`.
@@ -198,9 +239,15 @@ Step-back applies the inverse move — so a full inverse-alg implementation in c
 for free. `jumpTo` replays from the anchor state without animation, which is how the timeline
 scrubber works in Phase 4.
 
-Input surfaces feeding the queue: on-screen notation buttons, a text field (`R U R' U'` → parse →
-enqueue), keyboard bindings (speedcuber-standard: `j`=U, `f`=U', `i`=R, `k`=R'…), and later
-drag-to-turn.
+Input surfaces feeding the queue: on-screen move buttons (shift or right-click inverts), a text
+field (`R U R' U'` -> parse -> enqueue), keyboard bindings (speedcuber-standard: `j`=U, `f`=U',
+`i`=R, `k`=R'..., shift inverts, space plays, arrows step), and later drag-to-turn.
+
+An ad-hoc turn truncates anything after the cursor, the way editing mid-undo works.
+
+**Deferred:** overlapping turns ("flow", starting the next move at ~85% of the previous). It needs
+two simultaneous pivots and a rule for moves that share a layer — real complexity for a polish
+win, so it waits until the player UI is settled.
 
 ---
 
@@ -275,17 +322,17 @@ drop-in.
 
 ## 9. Phases
 
-| # | Deliverable | Exit criteria |
-|---|---|---|
-| **0** | Vite scaffold, deps, ESLint/Prettier, Vercel deploy | blank canvas live on a URL |
-| **1** | `core/` model + notation + tests | the §2.3 identity tests pass |
-| **2** | **Static 3D cube, final look, orbit camera** | looks *right* at rest — this is the gate |
-| **3** | **Turn animation + queue** | 60fps through `(R U R' U')` ×20, model & mesh still exactly in sync |
-| **4** | Player UI: play/pause/step/speed/scrub, notation input, keyboard | paste any alg, watch it, step through it |
-| **5** | OLL/PLL library + 2D case diagrams + browser | all 78 cases validated in CI |
-| **6** | Scramble (random-move → random-state) | scrambles are always solvable |
-| **7** | Facelet notation, import/export, URL state sharing | round-trip fidelity test |
-| **8** | *Future:* solver in worker; 2x2/4x4/5x5; drag-to-turn; trainer mode with timer | — |
+| #     | Deliverable                                                                    | Exit criteria                                                           |
+| ----- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| **0** | ✅ Vite scaffold, deps, ESLint/Prettier, Vitest, git                           | lint clean, build passes (Vercel deploy is an account-side action)      |
+| **1** | ✅ `core/` model + notation + tests                                            | 96 tests green, including the §2.3 list                                 |
+| **2** | ✅ **Static 3D cube, final look, orbit camera**                                | stickerless render signed off                                           |
+| **3** | ✅ **Turn animation + queue**                                                  | 114 tests green; `(R U R' U')` x20 stays exactly in step with the model |
+| **4** | Player UI: play/pause/step/speed/scrub, notation input, keyboard               | paste any alg, watch it, step through it                                |
+| **5** | OLL/PLL library + 2D case diagrams + browser                                   | all 78 cases validated in CI                                            |
+| **6** | Scramble (random-move → random-state)                                          | scrambles are always solvable                                           |
+| **7** | Facelet notation, import/export, URL state sharing                             | round-trip fidelity test                                                |
+| **8** | _Future:_ solver in worker; 2x2/4x4/5x5; drag-to-turn; trainer mode with timer | —                                                                       |
 
 Phases 2 and 3 carry the risk. If the cube doesn't look and feel right there, nothing after it
 matters — so those should reach a polished state and get a visual review before any UI chrome
@@ -295,5 +342,8 @@ is built.
 
 ## 10. Open decisions
 
-- [ ] TypeScript for `src/core/**`, or pure JS with JSDoc types? (§1)
-- [ ] Start with Phase 0+1 (scaffold + tested cube model), or a Phase 2 visual spike first?
+- [x] ~~TypeScript for `src/core/**`?~~ JS with JSDoc typedefs (§1).
+- [x] ~~Phase order?~~ Ran Phase 2 first as a visual spike, then 0 and 1.
+- [ ] Vercel project not yet created — needs an account-side action.
+- [ ] Bundle is ~320 KB gzipped, mostly drei's barrel import. Worth switching to direct imports
+      before launch; not worth it yet.
