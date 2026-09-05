@@ -401,8 +401,7 @@ body {
   width: 100%;
 }
 
-.menu-filter,
-.algbar-done {
+.menu-filter {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -413,7 +412,6 @@ body {
 }
 
 .menu-filter input,
-.algbar-done input,
 .menu-check {
   accent-color: #21b36b;
   cursor: pointer;
@@ -532,7 +530,13 @@ body {
   gap: 8px;
   align-items: center;
   padding: 18px 20px 12px;
-  height: var(--algbar-h);
+  /*
+   * A floor, not a fixed height. Pinning it kept the cube from resizing, but
+   * clipped anything that wrapped to a second line — the case title on a narrow
+   * screen, or a long algorithm. Content wins: the bar grows and the cube gives
+   * up the room, while short content still measures the same as freeplay.
+   */
+  min-height: var(--algbar-h);
   flex: none;
 }
 
@@ -549,16 +553,13 @@ body {
  */
 .algbar.is-empty {
   justify-content: center;
-  height: 56px;
 }
 
 /*
- * Freeplay drops the player as well, which together with the shorter bar would
- * hand the canvas a lot more height — and since the vertical axis binds on a
- * desktop, quietly enlarge the cube, the very thing pinning the bar was meant
- * to stop. So the canvas simply asks for the height it would have with a case
- * loaded: the top section is smaller, the cube sits higher, and it stays
- * exactly the size it is while an algorithm is up.
+ * Freeplay hides the player, so the canvas would otherwise take its height and
+ * enlarge the cube. It asks for the height it would have with a case loaded
+ * instead, leaving the space the player occupied empty — freeplay and a loaded
+ * case then lay out identically.
  *
  * Browsers without :has() get a larger cube in freeplay, which is harmless.
  */
@@ -695,11 +696,7 @@ body {
   align-content: flex-start;
   gap: 4px;
   justify-content: center;
-  flex: 1;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .algbar-move {
@@ -741,17 +738,21 @@ body {
   font-weight: 600;
 }
 
-/* --- stage: the lock, tucked into the corner of the cube area -------------- */
+/* --- stage: the corner controls, learned and lock -------------------------- */
 
-.lock-btn {
-  display: none;
+/*
+ * Both share this so they are the same size and sit on the same baseline —
+ * the learned control used to be a text label, which is why it never lined up
+ * with the lock.
+ */
+.cube-corner-btn {
+  display: grid;
+  place-items: center;
   position: absolute;
   top: 8px;
-  right: 10px;
   z-index: 5;
   width: 34px;
   height: 34px;
-  place-items: center;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -764,17 +765,34 @@ body {
   transition:
     opacity 0.14s ease,
     background 0.14s ease,
-    border-color 0.14s ease;
+    border-color 0.14s ease,
+    color 0.14s ease;
 }
 
-.lock-btn:active {
+.cube-corner-btn:hover {
   opacity: 1;
+}
+
+.lock-btn {
+  right: 10px;
+}
+
+.learn-btn {
+  left: 10px;
+  font-size: 15px;
 }
 
 .lock-btn.is-active {
   opacity: 1;
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.5);
+}
+
+.learn-btn.is-active {
+  opacity: 1;
+  background: rgba(33, 179, 107, 0.22);
+  border-color: #21b36b;
+  color: #4ede9c;
 }
 
 /* --- stage: transport ----------------------------------------------------- */
@@ -951,9 +969,16 @@ body {
     width: 100%;
   }
 
-  .lock-btn {
+  .cube-corner-btn {
     top: 10px;
+  }
+
+  .lock-btn {
     right: 16px;
+  }
+
+  .learn-btn {
+    left: 16px;
   }
 
   .rail--left {
@@ -969,10 +994,6 @@ body {
     display: flex;
   }
 
-  .lock-btn {
-    display: grid;
-  }
-
   /* Locked: no horizontal touch panning, so a drag that slips off the cube
      cannot swipe the page away mid-turn. The pager buttons still work, since
      programmatic scrolling is unaffected. */
@@ -983,10 +1004,6 @@ body {
   .stage {
     --algbar-h: 112px;
     --transport-h: 74px;
-  }
-
-  .algbar.is-empty {
-    height: 48px;
   }
 
   .algbar-move {

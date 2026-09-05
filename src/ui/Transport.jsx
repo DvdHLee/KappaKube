@@ -1,11 +1,12 @@
-import { MAX_SPEED, MIN_SPEED, useCubeStore } from '../state/useCubeStore.js';
+import { useCubeStore } from '../state/useCubeStore.js';
+import { MAX_SPEED, MIN_SPEED, usePrefsStore } from '../state/usePrefsStore.js';
 
 /** Playback controls, below the cube. */
 export default function Transport() {
   const queue = useCubeStore((s) => s.queue);
   const cursor = useCubeStore((s) => s.cursor);
   const status = useCubeStore((s) => s.status);
-  const speed = useCubeStore((s) => s.speed);
+  const speed = usePrefsStore((s) => s.speed);
   const busy = useCubeStore((s) => s.current !== null);
 
   const play = useCubeStore((s) => s.play);
@@ -13,8 +14,7 @@ export default function Transport() {
   const stepForward = useCubeStore((s) => s.stepForward);
   const stepBack = useCubeStore((s) => s.stepBack);
   const rewind = useCubeStore((s) => s.rewind);
-  const reset = useCubeStore((s) => s.reset);
-  const setSpeed = useCubeStore((s) => s.setSpeed);
+  const setSpeed = usePrefsStore((s) => s.setSpeed);
 
   const atEnd = cursor >= queue.length;
   const playing = status === 'playing';
@@ -57,10 +57,6 @@ export default function Transport() {
         >
           ▶
         </button>
-        <button className="hud-btn" onClick={reset} disabled={busy} title="Clear and solve">
-          Reset
-        </button>
-
         <span className="transport-count">
           {cursor} / {queue.length}
         </span>

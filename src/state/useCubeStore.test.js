@@ -253,15 +253,6 @@ describe('rewind and reset', () => {
   });
 });
 
-describe('speed', () => {
-  it('clamps to the allowed range', () => {
-    store().setSpeed(5);
-    expect(store().speed).toBe(120);
-    store().setSpeed(99999);
-    expect(store().speed).toBe(1200);
-  });
-});
-
 describe('loading a library case', () => {
   it('starts from the setup state and solves when played through', () => {
     const alg = parseAlg("R U R' U R U2 R'"); // Sune

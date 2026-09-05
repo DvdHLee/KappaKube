@@ -23,8 +23,6 @@ export default function AlgHeader() {
   const jumpTo = useCubeStore((s) => s.jumpTo);
   const busy = current !== null;
 
-  const completed = usePrefsStore((s) => s.completed);
-  const toggleCompleted = usePrefsStore((s) => s.toggleCompleted);
   const chosenAlg = usePrefsStore((s) => s.chosenAlg);
   const load = useLoadCase();
 
@@ -54,9 +52,7 @@ export default function AlgHeader() {
   if (queue.length === 0) {
     return (
       <div className="algbar is-empty">
-        <span className="algbar-hint">
-          Freeplay
-        </span>
+        <span className="algbar-hint">Freeplay</span>
       </div>
     );
   }
@@ -92,17 +88,6 @@ export default function AlgHeader() {
             <span className="algbar-name">{testCase.name}</span>
             {hasChoice && <span className="algbar-caret">▼</span>}
           </button>
-
-          <span className="algbar-group">{testCase.group}</span>
-
-          <label className="algbar-done">
-            <input
-              type="checkbox"
-              checked={Boolean(completed[testCase.id])}
-              onChange={() => toggleCompleted(testCase.id)}
-            />
-            Learned
-          </label>
 
           {open && hasChoice && (
             <div className="algbar-variants" role="menu">

@@ -11,6 +11,10 @@ import { DEFAULT_FRONT, DEFAULT_TOP } from '../theme.js';
  * per-session and has no business in localStorage, while none of this belongs
  * in the animation hot path.
  */
+export const DEFAULT_SPEED = 280; // ms per quarter turn
+export const MIN_SPEED = 120;
+export const MAX_SPEED = 1200;
+
 export const usePrefsStore = create(
   persist(
     (set, get) => ({
@@ -42,6 +46,12 @@ export const usePrefsStore = create(
 
       /** Whether the cube settings section is expanded. */
       setupOpen: true,
+
+      /** Playback speed, in ms per quarter turn. */
+      speed: DEFAULT_SPEED,
+
+      /** Which page the phone pager is showing. */
+      page: 0,
 
       setTop(top) {
         // Changing the top can orphan the front — a colour cannot face front if
@@ -97,6 +107,14 @@ export const usePrefsStore = create(
 
       setSetupOpen(setupOpen) {
         set({ setupOpen });
+      },
+
+      setSpeed(speed) {
+        set({ speed: Math.min(MAX_SPEED, Math.max(MIN_SPEED, speed)) });
+      },
+
+      setPage(page) {
+        set({ page });
       },
     }),
     {

@@ -7,6 +7,7 @@ import AlgHeader from './ui/AlgHeader.jsx';
 import Transport from './ui/Transport.jsx';
 import MovePad from './ui/MovePad.jsx';
 import { useKeyboard } from './ui/useKeyboard.js';
+import LearnedToggle from './ui/LearnedToggle.jsx';
 import { useSwipePager } from './ui/useSwipePager.js';
 import Segmented from './ui/Segmented.jsx';
 import { useCubeStore } from './state/useCubeStore.js';
@@ -61,8 +62,15 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [locked, setLocked] = useState(false);
 
+  // The pager position is remembered, so a phone reopens on the page it was
+  // left on. Reading it once at mount keeps the restore out of the render path.
   const pagesRef = useRef(null);
-  const [page, goToPage] = useSwipePager(pagesRef);
+  const [storedPage] = useState(() => usePrefsStore.getState().page);
+  const setStoredPage = usePrefsStore((s) => s.setPage);
+  const [page, goToPage] = useSwipePager(pagesRef, {
+    initial: storedPage,
+    onChange: setStoredPage,
+  });
 
   const n = useCubeStore((s) => s.n);
 
@@ -101,12 +109,14 @@ export default function App() {
           <AlgHeader />
 
           <div className="stage-canvas">
-            {/* Mobile only. Locking holds the camera still so a drag on the cube
-                turns a layer rather than swinging the view, and stops the page
-                swiping away mid-turn. Lives in the cube's own corner. */}
+            <LearnedToggle />
+
+            {/* Locking holds the camera still so a drag on the cube turns a
+                layer rather than swinging the view, and on a phone stops the
+                page swiping away mid-turn. */}
             <button
               type="button"
-              className={`lock-btn ${locked ? 'is-active' : ''}`}
+              className={`cube-corner-btn lock-btn ${locked ? 'is-active' : ''}`}
               aria-pressed={locked}
               aria-label={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
               title={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}

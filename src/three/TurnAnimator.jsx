@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useCubeStore } from '../state/useCubeStore.js';
+import { usePrefsStore } from '../state/usePrefsStore.js';
 
 /**
  * Drives the turning pivot.
@@ -52,7 +53,8 @@ export default function TurnAnimator({ pivotRef }) {
     const pivot = pivotRef.current;
     if (!pivot) return;
 
-    const { current, speed, finishTurn } = useCubeStore.getState();
+    const { current, finishTurn } = useCubeStore.getState();
+    const { speed } = usePrefsStore.getState();
 
     if (!current) {
       if (progress.current) {

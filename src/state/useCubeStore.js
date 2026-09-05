@@ -11,16 +11,15 @@ import { randomScramble } from '../core/scramble.js';
  * decrements; stepping forward applies queue[cursor] and increments. One list,
  * no separate history to keep in sync.
  *
+ * Speed lives in usePrefsStore, not here: it is a lasting preference rather
+ * than part of this session's cube.
+ *
  * `current` is the move being animated right now. It changes at most once per
  * move, never per frame — the animation's progress lives in a ref inside the
  * animator, so a turn costs zero React renders while it plays.
  *
  * @typedef {{ move: import('../core/moves.js').Move, direction: 1 | -1 }} Turn
  */
-
-export const DEFAULT_SPEED = 280; // ms per quarter turn
-export const MIN_SPEED = 120;
-export const MAX_SPEED = 1200;
 
 export const useCubeStore = create((set, get) => ({
   n: 3,
@@ -39,14 +38,9 @@ export const useCubeStore = create((set, get) => ({
 
   /** @type {'idle' | 'playing' | 'paused'} */
   status: 'idle',
-  speed: DEFAULT_SPEED,
 
   /** @type {Turn | null} */
   current: null,
-
-  setSpeed(speed) {
-    set({ speed: Math.min(MAX_SPEED, Math.max(MIN_SPEED, speed)) });
-  },
 
   setSize(n) {
     const solved = createSolvedCube(n);
