@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import CubeMesh from './CubeMesh.jsx';
 import TurnAnimator from './TurnAnimator.jsx';
+import DragToTurn from './DragToTurn.jsx';
 import { useCubeStore } from '../state/useCubeStore.js';
-import { BACKGROUND_COLOR } from '../theme.js';
 import { FOV, ISO_DIRECTION, cameraDistance, cubeRadius, isoPosition } from './framing.js';
 
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -14,15 +14,35 @@ const ORIGIN = new THREE.Vector3(0, 0, 0);
  * Eases the camera onto the iso preset, and gets out of the way otherwise.
  * A "free" request cancels an in-flight ease and leaves the camera put.
  */
-function CameraRig({ view, n }) {
+function CameraRig({ view, n, aspect }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const goal = useRef(null);
+  const framed = useRef(false);
 
   useEffect(() => {
     if (!view) return;
-    goal.current = view.name === 'iso' ? isoPosition(n) : null;
-  }, [view, n]);
+    goal.current = view.name === 'iso' ? isoPosition(n, aspect) : null;
+  }, [view, n, aspect]);
+
+  /**
+   * Frame the cube once the real canvas size is known, and again if the aspect
+   * changes — a phone rotating, or the browser chrome collapsing.
+   *
+   * The Canvas prop cannot do this: the camera is created before layout, so the
+   * aspect is not known yet. Re-framing is skipped once the user has orbited
+   * away, since then it would be yanking a camera they positioned themselves.
+   */
+  useEffect(() => {
+    const onPreset =
+      !framed.current || probeDir.copy(camera.position).normalize().dot(ISO_DIRECTION) > PRESET_DOT;
+    framed.current = true;
+    if (!onPreset) return;
+
+    goal.current = null; // snap, do not animate a resize
+    camera.position.copy(isoPosition(n, aspect));
+    if (controls) controls.update();
+  }, [aspect, n, camera, controls]);
 
   useFrame((_, dt) => {
     if (!goal.current || !controls) return;
@@ -93,9 +113,18 @@ function Studio() {
   );
 }
 
-export default function Scene({ n, view, autoRotate, onActiveView }) {
+/** Reports the canvas aspect ratio out to the rig. */
+function AspectProbe({ onChange }) {
+  const size = useThree((s) => s.size);
+  const aspect = size.height > 0 ? size.width / size.height : 1;
+  useEffect(() => onChange(aspect), [aspect, onChange]);
+  return null;
+}
+
+export default function Scene({ n, view, autoRotate, locked, onActiveView }) {
   const radius = cubeRadius(n);
   const pivotRef = useRef(null);
+  const [aspect, setAspect] = useState(1);
   const cube = useCubeStore((s) => s.cube);
   const current = useCubeStore((s) => s.current);
 
@@ -105,11 +134,15 @@ export default function Scene({ n, view, autoRotate, onActiveView }) {
       gl={{ antialias: true }}
       camera={{ fov: FOV, near: 0.1, far: 200, position: isoPosition(n).toArray() }}
     >
-      <color attach="background" args={[BACKGROUND_COLOR]} />
+      {/* No scene background: the canvas is left transparent so the stage's own
+          backdrop runs unbroken behind the algorithm bar, the cube and the
+          player, instead of the canvas painting a flat rectangle over it. */}
 
       <Studio />
 
-      <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
+      <DragToTurn enabled={locked} pivotRef={pivotRef}>
+        <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
+      </DragToTurn>
 
       <TurnAnimator pivotRef={pivotRef} />
 
@@ -128,15 +161,17 @@ export default function Scene({ n, view, autoRotate, onActiveView }) {
         enableDamping
         dampingFactor={0.08}
         enablePan={false}
-        autoRotate={autoRotate}
+        enableRotate={!locked}
+        autoRotate={autoRotate && !locked}
         autoRotateSpeed={0.6}
-        minDistance={cameraDistance(n, 0.8)}
-        maxDistance={cameraDistance(n, 3.5)}
+        minDistance={cameraDistance(n, aspect, 0.55)}
+        maxDistance={cameraDistance(n, aspect, 2.6)}
         minPolarAngle={0.15}
         maxPolarAngle={Math.PI - 0.15}
       />
 
-      <CameraRig view={view} n={n} />
+      <AspectProbe onChange={setAspect} />
+      <CameraRig view={view} n={n} aspect={aspect} />
       <ActiveViewProbe onChange={onActiveView} />
     </Canvas>
   );

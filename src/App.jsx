@@ -7,6 +7,8 @@ import AlgHeader from './ui/AlgHeader.jsx';
 import Transport from './ui/Transport.jsx';
 import MovePad from './ui/MovePad.jsx';
 import { useKeyboard } from './ui/useKeyboard.js';
+import { useSwipePager } from './ui/useSwipePager.js';
+import Segmented from './ui/Segmented.jsx';
 import { useCubeStore } from './state/useCubeStore.js';
 import { currentScheme, usePrefsStore } from './state/usePrefsStore.js';
 import { CASES_BY_ID } from './data/cases.js';
@@ -48,10 +50,19 @@ function useRestoreSession() {
   }, []);
 }
 
+const PAGES = [
+  { value: '0', label: 'Algorithms' },
+  { value: '1', label: 'Cube' },
+];
+
 export default function App() {
   const [view, setView] = useState(null); // requested preset
   const [activeView, setActiveView] = useState(null); // where the camera actually is
   const [autoRotate, setAutoRotate] = useState(false);
+  const [locked, setLocked] = useState(false);
+
+  const pagesRef = useRef(null);
+  const [page, goToPage] = useSwipePager(pagesRef);
 
   const n = useCubeStore((s) => s.n);
 
@@ -68,32 +79,65 @@ export default function App() {
   };
 
   return (
-    <div className="app">
-      <aside className="rail rail--left">
-        <header className="brand">
-          <span className="brand-mark">KappaKube</span>
-        </header>
-        <SetupPanel
-          activeView={activeView}
-          onView={goToView}
-          autoRotate={autoRotate}
-          onAutoRotate={setAutoRotate}
+    <>
+      {/* On a phone this is a horizontal scroll-snap pager: the rail is page
+          one, the cube page two. On desktop it stays a three-column grid and
+          never scrolls sideways, so the same markup serves both. */}
+      <div className={`app ${locked ? 'is-locked' : ''}`} ref={pagesRef}>
+        <aside className="rail rail--left">
+          <header className="brand">
+            <span className="brand-mark">KappaKube</span>
+          </header>
+          <SetupPanel
+            activeView={activeView}
+            onView={goToView}
+            autoRotate={autoRotate}
+            onAutoRotate={setAutoRotate}
+          />
+          <AlgMenu />
+        </aside>
+
+        <main className="stage">
+          <AlgHeader />
+
+          <div className="stage-canvas">
+            {/* Mobile only. Locking holds the camera still so a drag on the cube
+                turns a layer rather than swinging the view, and stops the page
+                swiping away mid-turn. Lives in the cube's own corner. */}
+            <button
+              type="button"
+              className={`lock-btn ${locked ? 'is-active' : ''}`}
+              aria-pressed={locked}
+              aria-label={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
+              title={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
+              onClick={() => setLocked((was) => !was)}
+            >
+              {locked ? '🔒' : '🔓'}
+            </button>
+            <Scene
+              n={n}
+              view={view}
+              autoRotate={autoRotate}
+              locked={locked}
+              onActiveView={setActiveView}
+            />
+          </div>
+          <Transport />
+        </main>
+
+        <aside className="rail rail--right">
+          <div className="panel-title">Turns</div>
+          <MovePad />
+        </aside>
+      </div>
+
+      <nav className="pager">
+        <Segmented
+          options={PAGES}
+          value={String(page)}
+          onChange={(value) => goToPage(Number(value))}
         />
-        <AlgMenu />
-      </aside>
-
-      <main className="stage">
-        <AlgHeader />
-        <div className="stage-canvas">
-          <Scene n={n} view={view} autoRotate={autoRotate} onActiveView={setActiveView} />
-        </div>
-        <Transport />
-      </main>
-
-      <aside className="rail rail--right">
-        <div className="panel-title">Turns</div>
-        <MovePad />
-      </aside>
-    </div>
+      </nav>
+    </>
   );
 }

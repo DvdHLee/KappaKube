@@ -39,7 +39,7 @@ body {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr) 176px;
   height: 100%;
-  background: radial-gradient(ellipse at 55% 42%, #17171d 0%, var(--bg) 62%);
+  background: var(--bg);
 }
 
 .rail {
@@ -60,7 +60,14 @@ body {
   gap: 10px;
 }
 
+/* The chrome above and below the cube, named once so the freeplay layout can
+   ask for "the canvas height a loaded case would have". */
 .stage {
+  --algbar-h: 124px;
+  --transport-h: 88px;
+  /* One backdrop for the whole column — bar, cube and player sit on it, and
+     the canvas is transparent so nothing interrupts it. */
+  background: radial-gradient(ellipse at 50% 46%, #17171d 0%, var(--bg) 68%);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -143,7 +150,7 @@ body {
     color 0.14s ease;
 }
 
-.hud-btn:hover:not(:disabled) {
+.hud-btn:hover:not(:disabled):not(.is-active) {
   background: var(--panel-hover);
 }
 
@@ -166,11 +173,72 @@ body {
 /* --- left rail: setup ----------------------------------------------------- */
 
 .setup {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.section-toggle .panel-title {
+  justify-content: flex-start;
+}
+
+.section-chevron {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0.3, 1);
+}
+
+/* Points down when open, right when shut. */
+.section-toggle[aria-expanded='false'] .section-chevron {
+  transform: rotate(-90deg);
+}
+
+/*
+ * Height transition without measuring: a grid row animated between 0fr and 1fr
+ * resolves to the content's own height, so the panel can open and close
+ * smoothly whatever is inside it.
+ */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0.3, 1);
+}
+
+.collapsible[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.collapsible-inner {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Only pay for the top spacing while there is something to space from. */
+.collapsible[data-open='true'] .collapsible-inner {
+  padding-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapsible,
+  .section-chevron {
+    transition: none;
+  }
 }
 
 .setup-row {
@@ -287,14 +355,29 @@ body {
  * around the chosen chip rather than a fill behind it. The chip is inset so the
  * ring, which sits underneath, shows around its edge.
  */
+/*
+ * Chips are a fixed size and the control shrinks to fit them, rather than
+ * stretching the row: Top has six colours and Front only four, so filling the
+ * width would make Front's chips half again as large. Sized this way the two
+ * rows line up and every colour is the same swatch.
+ *
+ * The thumb maths still holds, since (100% - padding - gaps) / count resolves
+ * to exactly one chip whatever the container width is.
+ */
+.segmented--swatch {
+  flex: none;
+}
+
 .segmented--swatch .segment {
+  flex: none;
+  width: 26px;
   padding: 4px;
 }
 
 .segmented--swatch .segment-chip {
   display: block;
   width: 100%;
-  height: 15px;
+  height: 16px;
   border-radius: 4px;
 }
 
@@ -433,17 +516,55 @@ body {
 
 /* --- stage: algorithm bar ------------------------------------------------- */
 
+/*
+ * A fixed height, not a minimum.
+ *
+ * The canvas takes whatever is left over, so any change here resizes it — and
+ * with the vertical axis binding on a desktop, a resized canvas rescales the
+ * cube. Letting the bar grow meant the cube was a few percent larger in
+ * freeplay than with a case loaded, and larger again for a short algorithm
+ * than a long one that wrapped. Pinning it keeps the cube exactly where it is
+ * whatever is loaded; a long algorithm scrolls inside the bar instead.
+ */
 .algbar {
   display: flex;
   flex-direction: column;
   gap: 8px;
   align-items: center;
   padding: 18px 20px 12px;
-  min-height: 92px;
+  height: var(--algbar-h);
+  flex: none;
 }
 
+/*
+ * Freeplay has one short word to show, so the bar shrinks to suit it.
+ *
+ * That would give the canvas the reclaimed height and, since the vertical axis
+ * binds on a desktop, quietly enlarge the cube again — the very thing pinning
+ * the bar was meant to stop. So the canvas gives the same amount back as
+ * padding: the top section is smaller and the cube sits higher, at exactly the
+ * size it is with a case loaded.
+ *
+ * Browsers without :has() simply get the larger cube, which is harmless.
+ */
 .algbar.is-empty {
   justify-content: center;
+  height: 56px;
+}
+
+/*
+ * Freeplay drops the player as well, which together with the shorter bar would
+ * hand the canvas a lot more height — and since the vertical axis binds on a
+ * desktop, quietly enlarge the cube, the very thing pinning the bar was meant
+ * to stop. So the canvas simply asks for the height it would have with a case
+ * loaded: the top section is smaller, the cube sits higher, and it stays
+ * exactly the size it is while an algorithm is up.
+ *
+ * Browsers without :has() get a larger cube in freeplay, which is harmless.
+ */
+.stage:has(.algbar.is-empty) .stage-canvas {
+  flex: none;
+  height: calc(100% - var(--algbar-h) - var(--transport-h));
 }
 
 .algbar-hint {
@@ -452,6 +573,7 @@ body {
 }
 
 .algbar-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -476,16 +598,68 @@ body {
   padding: 2px 8px;
 }
 
-.algbar-variants {
+/* --- variations popover ----------------------------------------------------- */
+
+.algbar-title {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  max-width: min(760px, 100%);
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.algbar-title:hover,
+.algbar-title[aria-expanded='true'] {
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.algbar-title[disabled] {
+  cursor: default;
+}
+
+.algbar-caret {
+  font-size: 9px;
+  color: var(--muted);
+  transition: transform 0.16s ease;
+}
+
+.algbar-title[aria-expanded='true'] .algbar-caret {
+  transform: rotate(180deg);
+}
+
+.algbar-variants {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: max-content;
+  max-width: min(92vw, 460px);
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: rgba(18, 18, 23, 0.97);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+
+.algbar-variants-label {
+  padding: 2px 6px 4px;
 }
 
 .variant {
+  text-align: left;
+  white-space: normal;
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 3px 9px;
@@ -500,7 +674,7 @@ body {
     border-color 0.12s ease;
 }
 
-.variant:hover:not(:disabled) {
+.variant:hover:not(:disabled):not(.is-active) {
   color: var(--fg);
   border-color: rgba(255, 255, 255, 0.28);
 }
@@ -518,8 +692,14 @@ body {
 .algbar-moves {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 4px;
   justify-content: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .algbar-move {
@@ -536,7 +716,13 @@ body {
     color 0.12s ease;
 }
 
-.algbar-move:hover:not(:disabled) {
+/*
+ * The :not(:disabled) guard makes these hover rules more specific than the
+ * selected-state rules below them, so without excluding the selected element
+ * hover would mask it — and the element you just clicked is precisely the one
+ * under the cursor. On touch it is worse, since :hover sticks after a tap.
+ */
+.algbar-move:hover:not(:disabled):not(.is-current) {
   background: var(--panel-hover);
   color: var(--fg);
 }
@@ -549,10 +735,46 @@ body {
   color: var(--fg);
 }
 
-.algbar-move.is-next {
+.algbar-move.is-current {
   background: var(--fg);
   color: #101014;
   font-weight: 600;
+}
+
+/* --- stage: the lock, tucked into the corner of the cube area -------------- */
+
+.lock-btn {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition:
+    opacity 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.lock-btn:active {
+  opacity: 1;
+}
+
+.lock-btn.is-active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* --- stage: transport ----------------------------------------------------- */
@@ -617,7 +839,50 @@ body {
   font-weight: 600;
 }
 
-/* --- narrow screens ------------------------------------------------------- */
+/* --- the mobile pager ------------------------------------------------------ */
+
+/* Hidden on desktop, where the layout is a static three-column grid. */
+.pager {
+  display: none;
+  align-items: center;
+  position: fixed;
+  /* Centred with auto margins rather than left:50% + translateX(-50%): no
+     transform, so nothing an ancestor does can shift it. */
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  margin-inline: auto;
+  z-index: 20;
+  width: min(280px, calc(100% - 40px));
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(16, 16, 20, 0.86);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/*
+ * Segmented wraps its buttons in .segmented-row to carry the optional label,
+ * so that row is the pager's flex child — stretching only .segmented leaves the
+ * row at its content width, bunched against the left edge.
+ */
+.pager .segmented-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.pager .segmented {
+  border: 0;
+  background: none;
+}
+
+.pager .segment {
+  font-size: 12px;
+  padding: 6px;
+}
+
+/* --- narrow screens --------------------------------------------------------- */
 
 @media (max-width: 1080px) {
   .app {
@@ -626,37 +891,110 @@ body {
 }
 
 @media (max-width: 860px) {
+  /*
+   * Two full-width pages side by side, swiped with native scroll-snap. Using
+   * the browser's own scrolling rather than a gesture library means momentum,
+   * rubber-banding and interrupted swipes all behave the way the platform does.
+   */
   .app {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(320px, 1fr) auto auto;
-    overflow-y: auto;
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
   }
 
-  .rail {
-    border: 0;
-    border-top: 1px solid var(--border);
+  .app::-webkit-scrollbar {
+    display: none;
   }
 
-  .rail--right {
-    order: 3;
+  .rail--left,
+  .stage {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    /* Clear the floating pager. */
+    padding-bottom: 68px;
+  }
+
+  /* A phone has no window chrome to stand the content off the glass, so the
+     panels carry their own breathing room at the edges. */
+  .brand {
+    padding: 20px 20px 12px;
+  }
+
+  .setup,
+  .menu-head {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .menu-list {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .algbar {
+    padding: 14px 20px 8px;
+  }
+
+  .transport {
+    padding: 8px 20px 12px;
+  }
+
+  .transport-speed {
+    width: 100%;
+  }
+
+  .lock-btn {
+    top: 10px;
+    right: 16px;
   }
 
   .rail--left {
-    order: 2;
-    max-height: 60vh;
+    border-right: 0;
+  }
+
+  /* Turns are a desktop affordance; on a phone you drag the cube itself. */
+  .rail--right {
+    display: none;
+  }
+
+  .pager {
+    display: flex;
+  }
+
+  .lock-btn {
+    display: grid;
+  }
+
+  /* Locked: no horizontal touch panning, so a drag that slips off the cube
+     cannot swipe the page away mid-turn. The pager buttons still work, since
+     programmatic scrolling is unaffected. */
+  .app.is-locked {
+    touch-action: pan-y;
   }
 
   .stage {
-    order: 1;
+    --algbar-h: 112px;
+    --transport-h: 74px;
   }
 
-  .movepad-grid {
-    grid-template-columns: repeat(6, 1fr);
+  .algbar.is-empty {
+    height: 48px;
   }
 
-  .movepad {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px;
+  .algbar-move {
+    font-size: 13px;
+    padding: 3px 7px;
+  }
+
+  .menu-list {
+    padding-bottom: 16px;
   }
 }

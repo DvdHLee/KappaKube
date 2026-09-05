@@ -35,3 +35,19 @@ export function useLoadCase() {
     [loadCase, selectCase, chooseAlg, chosenAlg],
   );
 }
+
+/**
+ * Drop the loaded case and go back to a solved cube.
+ *
+ * Shared by the Freeplay button and by clicking the case that is already
+ * loaded, so "no case" means the same thing however you get there.
+ */
+export function useClearCase() {
+  const reset = useCubeStore((s) => s.reset);
+  const selectCase = usePrefsStore((s) => s.selectCase);
+
+  return useCallback(() => {
+    selectCase(null);
+    reset();
+  }, [reset, selectCase]);
+}

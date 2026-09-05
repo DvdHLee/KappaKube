@@ -127,6 +127,38 @@ export const useCubeStore = create((set, get) => ({
     });
   },
 
+  /**
+   * Start a turn driven by a finger rather than by the clock. The pivot is
+   * handed to the gesture, which writes its rotation directly; the animator
+   * stands down until the drag ends.
+   */
+  beginDrag(move) {
+    if (get().current) return false;
+    set({ status: 'paused', current: { move, direction: 0, dragging: true } });
+    return true;
+  },
+
+  /**
+   * Release a dragged turn. `amount` is the quarter turns it snapped to (0 to
+   * spring back) and `fromAngle` where the finger left it, so the animator can
+   * carry on from there rather than jumping.
+   */
+  endDrag(amount, fromAngle) {
+    const { current } = get();
+    if (!current?.dragging) return;
+    set({
+      current: {
+        move: { ...current.move, amount, spin: amount },
+        direction: 0,
+        from: fromAngle,
+      },
+    });
+  },
+
+  cancelDrag() {
+    if (get().current?.dragging) set({ current: null });
+  },
+
   play() {
     const { queue, cursor } = get();
     if (cursor >= queue.length) return;

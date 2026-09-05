@@ -40,6 +40,9 @@ export const usePrefsStore = create(
       /** @type {'all' | 'learned' | 'unlearned'} */
       completedFilter: 'all',
 
+      /** Whether the cube settings section is expanded. */
+      setupOpen: true,
+
       setTop(top) {
         // Changing the top can orphan the front — a colour cannot face front if
         // it is now on top or on the bottom. Pick the nearest valid one instead
@@ -90,6 +93,10 @@ export const usePrefsStore = create(
 
       setCompletedFilter(completedFilter) {
         set({ completedFilter });
+      },
+
+      setSetupOpen(setupOpen) {
+        set({ setupOpen });
       },
     }),
     {

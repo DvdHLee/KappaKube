@@ -33,7 +33,14 @@ function Cubie({ pos, rot, stickers }) {
 
   return (
     <group position={[x, y, z]} quaternion={quaternionFromMat3(rot)}>
-      <mesh geometry={cubieGeometryFor(stickers)} material={cubieMaterial} dispose={null} />
+      <mesh
+        geometry={cubieGeometryFor(stickers)}
+        material={cubieMaterial}
+        dispose={null}
+        // The drag handler needs to know which piece was grabbed; reading it
+        // off the hit object is sturdier than inferring it from the hit point.
+        userData={{ pos }}
+      />
     </group>
   );
 }

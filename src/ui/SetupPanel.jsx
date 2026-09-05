@@ -3,6 +3,7 @@ import { COLOR_NAMES, validFronts } from '../core/scheme.js';
 import { useCubeStore } from '../state/useCubeStore.js';
 import { usePrefsStore } from '../state/usePrefsStore.js';
 import Segmented from './Segmented.jsx';
+import { useClearCase } from './useLoadCase.js';
 
 const VIEW_OPTIONS = [
   { value: 'iso', label: 'Iso', title: 'Snap back to the standard angle' },
@@ -22,7 +23,6 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
   const n = useCubeStore((s) => s.n);
   const setCubeSize = useCubeStore((s) => s.setSize);
   const shuffle = useCubeStore((s) => s.shuffle);
-  const reset = useCubeStore((s) => s.reset);
   const busy = useCubeStore((s) => s.current !== null);
 
   const top = usePrefsStore((s) => s.top);
@@ -31,6 +31,8 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
   const setFront = usePrefsStore((s) => s.setFront);
   const setPrefSize = usePrefsStore((s) => s.setSize);
   const selectCase = usePrefsStore((s) => s.selectCase);
+  const setupOpen = usePrefsStore((s) => s.setupOpen);
+  const setSetupOpen = usePrefsStore((s) => s.setSetupOpen);
 
   const changeSize = (value) => {
     const size = Number(value);
@@ -40,11 +42,7 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
     onView('iso');
   };
 
-  /** Drop the loaded case and go back to a solved cube to play with. */
-  const freeplay = () => {
-    selectCase(null);
-    reset();
-  };
+  const freeplay = useClearCase();
 
   const scramble = () => {
     selectCase(null);
@@ -53,51 +51,75 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
 
   return (
     <section className="setup">
-      <div className="panel-title">Cube</div>
+      <button
+        type="button"
+        className="section-toggle"
+        aria-expanded={setupOpen}
+        onClick={() => setSetupOpen(!setupOpen)}
+      >
+        <span className="panel-title">Cube</span>
+        <span className="section-chevron" aria-hidden="true">
+          ▾
+        </span>
+      </button>
 
-      {/* `activeView` is measured from the camera, so the indicator slides to
+      {/*
+       * Kept mounted and collapsed with CSS rather than unmounted, so the open
+       * and close can animate. The 0fr/1fr grid trick gets a height transition
+       * without having to measure the content.
+       */}
+      <div className="collapsible" data-open={setupOpen}>
+        <div className="collapsible-inner">
+          {/* `activeView` is measured from the camera, so the indicator slides to
           Free the moment you orbit off the preset. */}
-      <Segmented label="View" options={VIEW_OPTIONS} value={activeView} onChange={onView} />
-      <Segmented label="Size" options={SIZE_OPTIONS} value={String(n)} onChange={changeSize} />
+          <Segmented label="View" options={VIEW_OPTIONS} value={activeView} onChange={onView} />
+          <Segmented label="Size" options={SIZE_OPTIONS} value={String(n)} onChange={changeSize} />
 
-      <Segmented
-        label="Top"
-        variant="swatch"
-        options={swatches(COLOR_NAMES)}
-        value={top}
-        onChange={setTop}
-      />
-      {/* Only the four colours adjacent to the chosen top can face front — the
+          <Segmented
+            label="Top"
+            variant="swatch"
+            options={swatches(COLOR_NAMES)}
+            value={top}
+            onChange={setTop}
+          />
+          {/* Only the four colours adjacent to the chosen top can face front — the
           opposite colour is on the bottom and cannot be in two places. */}
-      <Segmented
-        label="Front"
-        variant="swatch"
-        options={swatches(validFronts(top))}
-        value={front}
-        onChange={setFront}
-      />
+          <Segmented
+            label="Front"
+            variant="swatch"
+            options={swatches(validFronts(top))}
+            value={front}
+            onChange={setFront}
+          />
 
-      <div className="setup-row">
-        <span className="hud-label">Play</span>
-        <div className="hud-group">
-          <button
-            className="hud-btn"
-            onClick={freeplay}
-            disabled={busy}
-            title="Solved cube, no algorithm loaded"
-          >
-            Freeplay
-          </button>
-          <button className="hud-btn" onClick={scramble} disabled={busy} title="Scramble the cube">
-            Shuffle
-          </button>
-          <button
-            className={`hud-btn ${autoRotate ? 'is-active' : ''}`}
-            onClick={() => onAutoRotate(!autoRotate)}
-            title="Slowly spin the cube"
-          >
-            Spin
-          </button>
+          <div className="setup-row">
+            <span className="hud-label">Play</span>
+            <div className="hud-group">
+              <button
+                className="hud-btn"
+                onClick={freeplay}
+                disabled={busy}
+                title="Solved cube, no algorithm loaded"
+              >
+                Freeplay
+              </button>
+              <button
+                className="hud-btn"
+                onClick={scramble}
+                disabled={busy}
+                title="Scramble the cube"
+              >
+                Shuffle
+              </button>
+              <button
+                className={`hud-btn ${autoRotate ? 'is-active' : ''}`}
+                onClick={() => onAutoRotate(!autoRotate)}
+                title="Slowly spin the cube"
+              >
+                Spin
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

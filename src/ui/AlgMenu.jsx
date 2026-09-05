@@ -4,7 +4,7 @@ import { useCubeStore } from '../state/useCubeStore.js';
 import { usePrefsStore } from '../state/usePrefsStore.js';
 import CaseDiagram from './CaseDiagram.jsx';
 import Segmented from './Segmented.jsx';
-import { useLoadCase } from './useLoadCase.js';
+import { useClearCase, useLoadCase } from './useLoadCase.js';
 
 const COMPLETED_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -25,6 +25,10 @@ export default function AlgMenu() {
 
   const n = useCubeStore((s) => s.n);
   const open = useLoadCase();
+  const clear = useClearCase();
+
+  /** Clicking the case that is already loaded puts it away again. */
+  const toggle = (testCase) => (testCase.id === selectedCaseId ? clear() : open(testCase));
 
   const available = sectionsFor(n);
 
@@ -137,8 +141,12 @@ export default function AlgMenu() {
                     <button
                       type="button"
                       className="menu-pick"
-                      title={testCase.label}
-                      onClick={() => open(testCase)}
+                      title={
+                        testCase.id === selectedCaseId
+                          ? `${testCase.label} — click to unload`
+                          : testCase.label
+                      }
+                      onClick={() => toggle(testCase)}
                     >
                       <CaseDiagram view={testCase.view} kind={testCase.kind} size={34} />
                       <span className="menu-name">{testCase.name}</span>

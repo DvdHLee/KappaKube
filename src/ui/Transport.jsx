@@ -19,6 +19,9 @@ export default function Transport() {
   const atEnd = cursor >= queue.length;
   const playing = status === 'playing';
 
+  // Nothing to play in freeplay, so the controls stand down entirely.
+  if (queue.length === 0) return null;
+
   return (
     <div className="transport">
       <div className="transport-row">

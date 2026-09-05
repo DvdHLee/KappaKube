@@ -62,15 +62,30 @@ export default function TurnAnimator({ pivotRef }) {
       return;
     }
 
-    // A new turn: reset the pivot before the first rotated frame.
+    // While a finger is on the cube the gesture owns the pivot.
+    if (current.dragging) {
+      progress.current = null;
+      return;
+    }
+
+    // A new turn. It may start part-way round, when a drag has just been let
+    // go — carrying on from where the finger left it instead of snapping back
+    // to zero and replaying is what makes the release feel continuous.
     if (progress.current?.turn !== current) {
+      const from = current.from ?? 0;
+      const to = spinOf(current.move) * (Math.PI / 2);
+      const full = durationFor(current.move, speed);
+      const span = Math.abs(to - from);
+      const whole = Math.abs(to) || Math.PI / 2;
+
       progress.current = {
         turn: current,
         elapsed: 0,
-        duration: durationFor(current.move, speed),
-        angle: spinOf(current.move) * (Math.PI / 2),
+        // Only the remaining sweep is left to cover, so scale the time to match.
+        duration: Math.max(0.05, full * (span / whole)),
+        from,
+        to,
       };
-      pivot.quaternion.identity();
     }
 
     const p = progress.current;
@@ -79,7 +94,8 @@ export default function TurnAnimator({ pivotRef }) {
     p.elapsed += Math.min(delta, 0.1);
 
     const t = Math.min(p.elapsed / p.duration, 1);
-    pivot.quaternion.setFromAxisAngle(AXIS_VECTORS[current.move.axis], p.angle * easeInOutQuad(t));
+    const angle = p.from + (p.to - p.from) * easeInOutQuad(t);
+    pivot.quaternion.setFromAxisAngle(AXIS_VECTORS[current.move.axis], angle);
 
     if (t >= 1) {
       progress.current = null;
