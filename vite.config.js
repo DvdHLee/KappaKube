@@ -10,23 +10,25 @@ export default defineConfig({
     exclude: ['cubing'],
   },
   build: {
+    /*
+     * Keep Vite's dynamic-import machinery out of cubing's worker.
+     *
+     * cubing spawns its solver as a module worker whose entry uses a dynamic
+     * import. Vite rewrites those through its `__vitePreload` helper, which
+     * exists to inject `<link rel=modulepreload>` tags — so the worker ended up
+     * running `document.getElementsByTagName(...)` in a context that has no
+     * `document`, and died before it could answer. Solve simply hung. Dev never
+     * showed it, because there cubing is served unbundled and untouched.
+     *
+     * Two settings between them leave the worker importing nothing that needs a
+     * DOM: `modulePreload: false` empties the helper's dependency list (it does
+     * nothing at all when there is nothing to preload), and splitting the
+     * helper into its own chunk stops it dragging the whole app entry — React,
+     * three.js and main.jsx's `createRoot` — in behind it.
+     */
+    modulePreload: false,
     rollupOptions: {
       output: {
-        /*
-         * Keep Vite's dynamic-import preload helper out of the app entry.
-         *
-         * cubing finds its worker by importing its own worker-entry chunk and
-         * reading `import.meta.url`, then spawning that file as a module
-         * worker. The entry uses a dynamic import, so it needs the preload
-         * helper — and by default the helper lives in the app's entry chunk,
-         * so the worker began `import "./index-*.js"`. That runs main.jsx
-         * inside the worker, where `document` does not exist, and the worker
-         * dies before it can answer: Solve hangs in production while dev,
-         * which serves cubing unbundled, is fine.
-         *
-         * Giving the helper its own chunk leaves the worker importing nothing
-         * but cubing.
-         */
         manualChunks(id) {
           if (id.includes('vite/preload-helper')) return 'preload-helper';
         },

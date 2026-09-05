@@ -23,6 +23,16 @@ async function loadSolvers() {
     import('cubing/kpuzzle'),
     import('cubing/search'),
   ]);
+  /*
+   * cubing finds its worker by trying `import.meta.resolve` first, which asks
+   * for a plain `search-worker-entry.js` sitting beside the chunk. A production
+   * build names every file with a content hash, so that request is a guaranteed
+   * 404 — recoverable, since it falls through to reading the real URL out of
+   * the built chunk, but only after a failed request and a console error on
+   * every solve. This flag puts the strategy that works first.
+   */
+  search.setSearchDebug({ prioritizeEsbuildWorkaroundForWorkerInstantiation: true });
+
   cached = { puzzles, KPattern, search, kpuzzles: {} };
   return cached;
 }
