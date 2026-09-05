@@ -549,7 +549,7 @@ body {
  */
 .algbar.is-empty {
   justify-content: center;
-  height: 56px;
+  padding: 50px;
 }
 
 /*
@@ -564,7 +564,6 @@ body {
  */
 .stage:has(.algbar.is-empty) .stage-canvas {
   flex: none;
-  height: calc(100% - var(--algbar-h) - var(--transport-h));
 }
 
 .algbar-hint {
