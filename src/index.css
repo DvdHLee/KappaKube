@@ -164,6 +164,14 @@ body {
   color: #101014;
 }
 
+/* Square-ish, so the three transport icons sit evenly beside the play button. */
+.hud-btn--icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  padding: 6px 0;
+}
+
 .hud-btn--primary {
   background: var(--fg);
   color: #101014;
