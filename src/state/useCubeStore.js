@@ -132,9 +132,9 @@ export const useCubeStore = create((set, get) => ({
    * a cube jumping into motion the instant you ask for help is startling. Press
    * play or step through it.
    *
-   * Marked as solving so that when the last move lands the result folds back
-   * into free play — the solved cube becomes the new starting point rather than
-   * leaving a spent solution sitting in the timeline.
+   * `solving` marks it as in flight, which is cleared once the last move lands.
+   * The moves stay on the timeline afterwards so the solve can be rewound and
+   * replayed, and `base` remains the scrambled cube it started from.
    */
   playSolution(moves) {
     if (moves.length === 0) return;
@@ -272,11 +272,11 @@ export const useCubeStore = create((set, get) => ({
     if (status === 'playing' && current.direction === 1) {
       if (advanced < queue.length) {
         get().stepForward();
-      } else if (get().solving) {
-        // The solution has played out; the cube it produced is now the free cube.
-        set({ base: get().cube, queue: [], cursor: 0, status: 'idle', solving: false });
       } else {
-        set({ status: 'idle' });
+        // A finished solution stays on the timeline so it can be rewound and
+        // watched again; `base` is still the cube it started from, so going
+        // back to the beginning returns to the scramble.
+        set({ status: 'idle', solving: false });
       }
     }
   },

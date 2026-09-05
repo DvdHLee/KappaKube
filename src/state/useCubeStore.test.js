@@ -336,32 +336,33 @@ describe('playing a solution', () => {
     expect(store().status).toBe('paused');
   });
 
-  it('runs from where the cube is and folds back into free play', () => {
-    const scrambled = applyAlg(createSolvedCube(3), parseAlg('R U F'));
-    store().enterFreeplay(scrambled);
+  it('stays on the timeline once it has played out', () => {
+    store().enterFreeplay(applyAlg(createSolvedCube(3), parseAlg('R U F')));
     store().playSolution(solution());
-
     expect(store().solving).toBe(true);
-    expect(store().queue).toHaveLength(4);
+
     playAll();
 
-    // Once the last move lands the timeline is spent and clears itself.
+    // The moves remain, so the solve can be rewound and watched again.
     expect(store().solving).toBe(false);
-    expect(store().queue).toEqual([]);
-    expect(store().cursor).toBe(0);
+    expect(store().queue).toHaveLength(4);
+    expect(store().cursor).toBe(4);
     expect(store().status).toBe('idle');
   });
 
-  it('makes the result the new starting point', () => {
-    store().enterFreeplay(applyAlg(createSolvedCube(3), parseAlg('R U F')));
+  it('rewinds to the cube it was asked to solve', () => {
+    const scrambled = applyAlg(createSolvedCube(3), parseAlg('R U F'));
+    store().enterFreeplay(scrambled);
     store().playSolution(solution());
     playAll();
-    const after = store().cube;
+    expect(cubesEqual(store().cube, scrambled)).toBe(false);
 
-    store().turn(parseAlg('D')[0]);
-    settle();
     store().rewind();
-    expect(cubesEqual(store().cube, after)).toBe(true);
+    expect(cubesEqual(store().cube, scrambled)).toBe(true);
+
+    // And it can be played through again from there.
+    playAll();
+    expect(store().cursor).toBe(4);
   });
 
   it('ignores an empty solution', () => {

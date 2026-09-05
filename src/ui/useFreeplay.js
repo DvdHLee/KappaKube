@@ -25,17 +25,18 @@ export function useEnterFreeplay() {
 /**
  * Keep the stored freeplay cube in step with the one on screen.
  *
- * Only while no algorithm is loaded: practising a case must not overwrite the
- * cube the user was playing with. Free turns happen at human speed, so writing
- * on each one costs nothing.
+ * Gated on no library case being loaded rather than on an empty timeline: a
+ * solution sitting on the timeline is still the user's own cube and worth
+ * remembering, whereas practising a case must not overwrite it. Free turns
+ * happen at human speed, so writing on each one costs nothing.
  */
 export function useRememberFreeplay() {
   const cube = useCubeStore((s) => s.cube);
-  const queue = useCubeStore((s) => s.queue);
   const remember = usePrefsStore((s) => s.rememberFreeplay);
+  const selectedCaseId = usePrefsStore((s) => s.selectedCaseId);
 
   useEffect(() => {
-    if (queue.length > 0) return; // a case is loaded
+    if (selectedCaseId) return; // practising a case
     remember(cube.n, serializeCube(cube));
-  }, [cube, queue, remember]);
+  }, [cube, selectedCaseId, remember]);
 }
