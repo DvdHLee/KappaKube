@@ -1,0 +1,127 @@
+:root {
+  --bg: #0c0c10;
+  --fg: #e8e8ec;
+  --muted: #7c7c88;
+  --panel: rgba(255, 255, 255, 0.05);
+  --panel-hover: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.09);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+.app {
+  position: relative;
+  height: 100%;
+  /* Subtle vignette so the cube sits in a space rather than on a flat field. */
+  background: radial-gradient(ellipse at 50% 42%, #17171d 0%, var(--bg) 62%);
+}
+
+.app canvas {
+  display: block;
+  touch-action: none;
+}
+
+.brand {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.brand-mark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brand-sub {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.hud {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(16, 16, 20, 0.72);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hud-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 6px 0 2px;
+}
+
+.hud-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
+.hud-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+  background: var(--panel);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.hud-btn:hover {
+  background: var(--panel-hover);
+}
+
+.hud-btn.is-active {
+  background: var(--fg);
+  color: #101014;
+}

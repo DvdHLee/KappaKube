@@ -1,0 +1,96 @@
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import {
+  CUBIE_RADIUS,
+  CUBIE_SEGMENTS,
+  CUBIE_SIZE,
+  FACE_COLORS,
+  INTERIOR_COLOR,
+} from '../theme.js';
+
+/**
+ * Stickerless cubies.
+ *
+ * RoundedBoxGeometry is non-indexed and inherits BoxGeometry's six material
+ * groups. It only *spherifies* the original box vertices, so each group still
+ * covers one face plus its half of every adjacent bevel — meaning a per-group
+ * colour puts the colour break exactly on the 45 degree edge line, which is
+ * precisely how a moulded stickerless piece looks.
+ *
+ * Rather than a six-material mesh (six draw calls per cubie) we bake the groups
+ * into a vertex-colour attribute and clear them: one draw call per cubie. At
+ * 3x3 that is 26 instead of 156, and the gap widens fast on 5x5 and up.
+ */
+
+/** BoxGeometry emits its sides in this order; group i is side BOX_SIDES[i]. */
+const BOX_SIDES = ['R', 'L', 'U', 'D', 'F', 'B'];
+
+const baseGeometry = new RoundedBoxGeometry(
+  CUBIE_SIZE,
+  CUBIE_SIZE,
+  CUBIE_SIZE,
+  CUBIE_SEGMENTS,
+  CUBIE_RADIUS,
+);
+
+/**
+ * A cubie's colour set never changes — turning only moves and reorients the
+ * piece — so each physical cubie maps to exactly one geometry for the life of
+ * the app. The cache is bounded by cubie count (26 for 3x3).
+ */
+const cache = new Map();
+const scratchColor = new THREE.Color();
+
+function cacheKey(stickers) {
+  return BOX_SIDES.map((side) => stickers[side] ?? '.').join('');
+}
+
+/**
+ * Geometry for a cubie whose local directions carry the given face colours.
+ * Position/normal/uv attributes are shared with the base geometry — three keys
+ * its GPU buffers by attribute object, so those upload exactly once — and only
+ * the small colour attribute is per-variant.
+ */
+export function cubieGeometryFor(stickers) {
+  const key = cacheKey(stickers);
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const count = baseGeometry.attributes.position.count;
+  const colors = new Float32Array(count * 3);
+
+  baseGeometry.groups.forEach((group, i) => {
+    const shown = stickers[BOX_SIDES[i]];
+    // setStyle converts sRGB hex into the renderer's working colour space, the
+    // same path material.color takes, so these match the palette exactly.
+    scratchColor.setStyle(shown ? FACE_COLORS[shown] : INTERIOR_COLOR);
+    const end = group.start + group.count;
+    for (let v = group.start; v < end; v++) {
+      colors[v * 3] = scratchColor.r;
+      colors[v * 3 + 1] = scratchColor.g;
+      colors[v * 3 + 2] = scratchColor.b;
+    }
+  });
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', baseGeometry.attributes.position);
+  geometry.setAttribute('normal', baseGeometry.attributes.normal);
+  geometry.setAttribute('uv', baseGeometry.attributes.uv);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+
+  cache.set(key, geometry);
+  return geometry;
+}
+
+/**
+ * One material for the whole cube. Slight clearcoat reads as the glossy moulded
+ * plastic of a stickerless cube without tipping into looking wet.
+ */
+export const cubieMaterial = new THREE.MeshPhysicalMaterial({
+  vertexColors: true,
+  roughness: 0.45,
+  metalness: 0,
+  clearcoat: 0.4,
+  clearcoatRoughness: 0.35,
+});
