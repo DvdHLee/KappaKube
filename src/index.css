@@ -624,6 +624,9 @@ body {
   flex-direction: column;
   gap: 8px;
   align-items: center;
+  /* Centred, so a solution's moves — which appear with no case heading above
+     them — sit in the middle of the bar rather than crammed against the top. */
+  justify-content: center;
   padding: 18px 20px 12px;
   /*
    * A floor, not a fixed height. Pinning it kept the cube from resizing, but
@@ -840,23 +843,50 @@ body {
  * the learned control used to be a text label, which is why it never lined up
  * with the lock.
  */
-.cube-corner-btn {
-  display: grid;
-  place-items: center;
+/* One bar across the top of the cube, so the two sides share a baseline. */
+.cube-corners {
   position: absolute;
   top: 8px;
+  left: 10px;
+  right: 10px;
   z-index: 5;
-  width: 34px;
+  /* Three tracks so the middle group is centred over the cube whatever the
+     side groups happen to contain. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 8px;
+  /* Only the buttons take clicks; the rest of the bar lets the cube through. */
+  pointer-events: none;
+}
+
+.cube-corner-group:last-child {
+  justify-self: end;
+}
+
+.cube-corner-group {
+  display: flex;
+  gap: 6px;
+}
+
+.cube-corner-btn {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
   height: 34px;
-  padding: 0;
+  min-width: 34px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
   border: 1px solid transparent;
   border-radius: 10px;
   background: var(--sunken);
   color: var(--muted);
-  font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.5;
+  opacity: 0.55;
+  white-space: nowrap;
   transition:
     opacity 0.14s ease,
     background 0.14s ease,
@@ -868,13 +898,21 @@ body {
   opacity: 1;
 }
 
-.lock-btn {
-  right: 10px;
+.lock-btn,
+.learn-btn {
+  padding: 0;
+  width: 34px;
+  font-size: 15px;
 }
 
-.learn-btn {
-  left: 10px;
-  font-size: 15px;
+.cube-corner-btn:disabled {
+  cursor: default;
+}
+
+.cube-corner-btn.is-error {
+  color: #ff9aa2;
+  border-color: #e63946;
+  opacity: 1;
 }
 
 .lock-btn.is-active {
@@ -1075,16 +1113,10 @@ body {
     width: 100%;
   }
 
-  .cube-corner-btn {
+  .cube-corners {
     top: 10px;
-  }
-
-  .lock-btn {
-    right: 16px;
-  }
-
-  .learn-btn {
     left: 16px;
+    right: 16px;
   }
 
   .rail--left {

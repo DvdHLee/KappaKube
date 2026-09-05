@@ -5,9 +5,15 @@ import { usePrefsStore } from '../state/usePrefsStore.js';
 import Segmented from './Segmented.jsx';
 import { useEnterFreeplay } from './useFreeplay.js';
 
+/*
+ * Spin joins the view modes rather than sitting apart as its own toggle: the
+ * three are mutually exclusive in practice, since asking for a preset already
+ * stops the cube drifting off it.
+ */
 const VIEW_OPTIONS = [
   { value: 'iso', label: 'Iso', title: 'Snap back to the standard angle' },
   { value: 'free', label: 'Free', title: 'Wherever you have dragged the camera' },
+  { value: 'spin', label: 'Spin', title: 'Turn the cube slowly on its own' },
 ];
 
 const THEME_OPTIONS = [
@@ -27,20 +33,17 @@ const swatches = (names) =>
 
 export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotate }) {
   const n = useCubeStore((s) => s.n);
-  const shuffle = useCubeStore((s) => s.shuffle);
-  const busy = useCubeStore((s) => s.current !== null);
 
   const top = usePrefsStore((s) => s.top);
   const front = usePrefsStore((s) => s.front);
   const setTop = usePrefsStore((s) => s.setTop);
   const setFront = usePrefsStore((s) => s.setFront);
   const setPrefSize = usePrefsStore((s) => s.setSize);
-  const selectCase = usePrefsStore((s) => s.selectCase);
-  const enterFreeplay = useEnterFreeplay();
   const theme = usePrefsStore((s) => s.theme);
   const setTheme = usePrefsStore((s) => s.setTheme);
   const setupOpen = usePrefsStore((s) => s.setupOpen);
   const setSetupOpen = usePrefsStore((s) => s.setSetupOpen);
+  const enterFreeplay = useEnterFreeplay();
 
   const changeSize = (value) => {
     const size = Number(value);
@@ -51,11 +54,9 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
     onView('iso');
   };
 
-  const freeplay = () => enterFreeplay(n);
-
-  const scramble = () => {
-    selectCase(null);
-    shuffle();
+  const changeView = (mode) => {
+    onAutoRotate(mode === 'spin');
+    if (mode !== 'spin') onView(mode);
   };
 
   return (
@@ -79,9 +80,14 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
        */}
       <div className="collapsible" data-open={setupOpen}>
         <div className="collapsible-inner">
-          {/* `activeView` is measured from the camera, so the indicator slides to
-          Free the moment you orbit off the preset. */}
-          <Segmented label="View" options={VIEW_OPTIONS} value={activeView} onChange={onView} />
+          {/* `activeView` is measured from the camera, so the indicator slides
+              to Free the moment you orbit off the preset. */}
+          <Segmented
+            label="View"
+            options={VIEW_OPTIONS}
+            value={autoRotate ? 'spin' : activeView}
+            onChange={changeView}
+          />
           <Segmented label="Size" options={SIZE_OPTIONS} value={String(n)} onChange={changeSize} />
           <Segmented label="Theme" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
 
@@ -93,7 +99,7 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
             onChange={setTop}
           />
           {/* Only the four colours adjacent to the chosen top can face front — the
-          opposite colour is on the bottom and cannot be in two places. */}
+              opposite colour is on the bottom and cannot be in two places. */}
           <Segmented
             label="Front"
             variant="swatch"
@@ -101,35 +107,6 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
             value={front}
             onChange={setFront}
           />
-
-          <div className="setup-row">
-            <span className="hud-label">Play</span>
-            <div className="hud-group">
-              <button
-                className="hud-btn"
-                onClick={freeplay}
-                disabled={busy}
-                title="Solved cube, no algorithm loaded"
-              >
-                Freeplay
-              </button>
-              <button
-                className="hud-btn"
-                onClick={scramble}
-                disabled={busy}
-                title="Scramble the cube"
-              >
-                Shuffle
-              </button>
-              <button
-                className={`hud-btn ${autoRotate ? 'is-active' : ''}`}
-                onClick={() => onAutoRotate(!autoRotate)}
-                title="Slowly spin the cube"
-              >
-                Spin
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </section>

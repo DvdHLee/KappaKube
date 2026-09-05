@@ -42,9 +42,21 @@ export const useCubeStore = create((set, get) => ({
   /** @type {Turn | null} */
   current: null,
 
+  /** True while a computed solution is playing itself out. */
+  solving: false,
+
   setSize(n) {
     const solved = createSolvedCube(n);
-    set({ n, cube: solved, base: solved, queue: [], cursor: 0, current: null, status: 'idle' });
+    set({
+      n,
+      cube: solved,
+      base: solved,
+      queue: [],
+      cursor: 0,
+      current: null,
+      status: 'idle',
+      solving: false,
+    });
   },
 
   /** Replace the timeline, starting from `base` (solved unless given). */
@@ -57,6 +69,7 @@ export const useCubeStore = create((set, get) => ({
       cursor: 0,
       current: null,
       status: 'idle',
+      solving: false,
     });
   },
 
@@ -68,7 +81,15 @@ export const useCubeStore = create((set, get) => ({
   /** Back to solved with an empty timeline. */
   reset() {
     const solved = createSolvedCube(get().n);
-    set({ cube: solved, base: solved, queue: [], cursor: 0, current: null, status: 'idle' });
+    set({
+      cube: solved,
+      base: solved,
+      queue: [],
+      cursor: 0,
+      current: null,
+      status: 'idle',
+      solving: false,
+    });
   },
 
   /**
@@ -86,6 +107,7 @@ export const useCubeStore = create((set, get) => ({
       cursor: 0,
       current: null,
       status: 'idle',
+      solving: false,
     });
   },
 
@@ -104,6 +126,31 @@ export const useCubeStore = create((set, get) => ({
   },
 
   /**
+   * Play a computed solution from where the cube is now.
+   *
+   * Loaded but not started: the solution is worth reading before watching, and
+   * a cube jumping into motion the instant you ask for help is startling. Press
+   * play or step through it.
+   *
+   * Marked as solving so that when the last move lands the result folds back
+   * into free play — the solved cube becomes the new starting point rather than
+   * leaving a spent solution sitting in the timeline.
+   */
+  playSolution(moves) {
+    if (moves.length === 0) return;
+    const { cube } = get();
+    set({
+      base: cube,
+      cube,
+      queue: moves,
+      cursor: 0,
+      current: null,
+      status: 'paused',
+      solving: true,
+    });
+  },
+
+  /**
    * Put the cube into a library case and load its algorithm ready to play.
    * The setup is the inverse of the algorithm, so playing it through lands on a
    * solved cube.
@@ -118,6 +165,7 @@ export const useCubeStore = create((set, get) => ({
       cursor: 0,
       current: null,
       status: 'idle',
+      solving: false,
     });
   },
 
@@ -222,8 +270,14 @@ export const useCubeStore = create((set, get) => ({
     // Only a forward step through the timeline chains into the next move; a
     // free turn stops where it is.
     if (status === 'playing' && current.direction === 1) {
-      if (advanced < queue.length) get().stepForward();
-      else set({ status: 'idle' });
+      if (advanced < queue.length) {
+        get().stepForward();
+      } else if (get().solving) {
+        // The solution has played out; the cube it produced is now the free cube.
+        set({ base: get().cube, queue: [], cursor: 0, status: 'idle', solving: false });
+      } else {
+        set({ status: 'idle' });
+      }
     }
   },
 

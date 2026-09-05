@@ -9,6 +9,7 @@ import MovePad from './ui/MovePad.jsx';
 import { useKeyboard } from './ui/useKeyboard.js';
 import { useRememberFreeplay } from './ui/useFreeplay.js';
 import LearnedToggle from './ui/LearnedToggle.jsx';
+import FreeplayTools from './ui/FreeplayTools.jsx';
 import { useSwipePager } from './ui/useSwipePager.js';
 import Segmented from './ui/Segmented.jsx';
 import { useCubeStore } from './state/useCubeStore.js';
@@ -131,21 +132,34 @@ export default function App() {
           <AlgHeader />
 
           <div className="stage-canvas">
-            <LearnedToggle />
+            {/* One bar across the top of the cube so both sides line up. */}
+            <div className="cube-corners">
+              <div className="cube-corner-group">
+                <LearnedToggle />
+              </div>
 
-            {/* Locking holds the camera still so a drag on the cube turns a
-                layer rather than swinging the view, and on a phone stops the
-                page swiping away mid-turn. */}
-            <button
-              type="button"
-              className={`cube-corner-btn lock-btn ${locked ? 'is-active' : ''}`}
-              aria-pressed={locked}
-              aria-label={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
-              title={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
-              onClick={() => setLocked(!locked)}
-            >
-              {locked ? '🔒' : '🔓'}
-            </button>
+              <div className="cube-corner-group">
+                <FreeplayTools />
+              </div>
+
+              <div className="cube-corner-group">
+                {/* Locking holds the camera still so a drag on the cube turns a
+                    layer rather than swinging the view, and on a phone stops
+                    the page swiping away mid-turn. */}
+                <button
+                  type="button"
+                  className={`cube-corner-btn lock-btn ${locked ? 'is-active' : ''}`}
+                  aria-pressed={locked}
+                  aria-label={
+                    locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'
+                  }
+                  title={locked ? 'Locked: drag to turn a layer' : 'Unlocked: drag to look around'}
+                  onClick={() => setLocked(!locked)}
+                >
+                  {locked ? '🔒' : '🔓'}
+                </button>
+              </div>
+            </div>
             <Scene
               n={n}
               view={view}

@@ -322,3 +322,61 @@ describe('entering free play', () => {
     expect(store().queue).toEqual([]);
   });
 });
+
+describe('playing a solution', () => {
+  const solution = () => parseAlg("R U R' U'");
+
+  it('waits to be started rather than playing itself', () => {
+    store().enterFreeplay(applyAlg(createSolvedCube(3), parseAlg('R U F')));
+    store().playSolution(solution());
+
+    expect(store().queue).toHaveLength(4);
+    expect(store().cursor).toBe(0);
+    expect(store().current).toBeNull();
+    expect(store().status).toBe('paused');
+  });
+
+  it('runs from where the cube is and folds back into free play', () => {
+    const scrambled = applyAlg(createSolvedCube(3), parseAlg('R U F'));
+    store().enterFreeplay(scrambled);
+    store().playSolution(solution());
+
+    expect(store().solving).toBe(true);
+    expect(store().queue).toHaveLength(4);
+    playAll();
+
+    // Once the last move lands the timeline is spent and clears itself.
+    expect(store().solving).toBe(false);
+    expect(store().queue).toEqual([]);
+    expect(store().cursor).toBe(0);
+    expect(store().status).toBe('idle');
+  });
+
+  it('makes the result the new starting point', () => {
+    store().enterFreeplay(applyAlg(createSolvedCube(3), parseAlg('R U F')));
+    store().playSolution(solution());
+    playAll();
+    const after = store().cube;
+
+    store().turn(parseAlg('D')[0]);
+    settle();
+    store().rewind();
+    expect(cubesEqual(store().cube, after)).toBe(true);
+  });
+
+  it('ignores an empty solution', () => {
+    store().enterFreeplay(createSolvedCube(3));
+    store().playSolution([]);
+    expect(store().solving).toBe(false);
+    expect(store().queue).toEqual([]);
+  });
+
+  it('is called off by anything that replaces the timeline', () => {
+    store().enterFreeplay(applyAlg(createSolvedCube(3), parseAlg('R U F')));
+    store().playSolution(solution());
+    expect(store().solving).toBe(true);
+
+    store().enterFreeplay(createSolvedCube(3));
+    expect(store().solving).toBe(false);
+  });
+});
