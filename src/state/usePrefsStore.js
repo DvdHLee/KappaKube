@@ -44,6 +44,9 @@ export const usePrefsStore = create(
       /** @type {'all' | 'learned' | 'unlearned'} */
       completedFilter: 'all',
 
+      /** @type {'dark' | 'light'} */
+      theme: 'dark',
+
       /** Whether the cube settings section is expanded. */
       setupOpen: true,
 
@@ -70,7 +73,8 @@ export const usePrefsStore = create(
         // A case belongs to one cube size, so a stored selection stops making
         // sense the moment the size changes.
         const id = get().selectedCaseId ?? '';
-        const stillValid = size === 2 ? id.startsWith('OR-') : /^(OLL|PLL)-/.test(id);
+        const prefixes = { 2: /^OR-/, 3: /^(OLL|PLL)-/, 4: /^PAR-/ };
+        const stillValid = prefixes[size]?.test(id) ?? false;
         set({ size, selectedCaseId: stillValid ? id : null });
       },
 
@@ -103,6 +107,10 @@ export const usePrefsStore = create(
 
       setCompletedFilter(completedFilter) {
         set({ completedFilter });
+      },
+
+      setTheme(theme) {
+        set({ theme });
       },
 
       setSetupOpen(setupOpen) {

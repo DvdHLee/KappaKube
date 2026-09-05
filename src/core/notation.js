@@ -345,14 +345,24 @@ export function formatMove(move, n = 3) {
         return `${depth}${face}w${suffix}`;
       }
     }
+  }
 
-    // a single inner layer, SiGN style
-    if (layers.length === 1) {
+  /*
+   * A single inner layer can be named from either side — on a 4x4 the layer at
+   * -1 is both `2L` and `3R`. Both are correct; the shallower one is the one a
+   * cuber writes, so pick that rather than always preferring the positive face.
+   */
+  if (layers.length === 1) {
+    let best = null;
+    for (const face of [pos, neg]) {
       for (let depth = 2; depth < n; depth++) {
-        if (layers[0] === layersFrom(face, depth, n).pop()) {
-          return `${depth}${face}${suffix}`;
-        }
+        if (layers[0] !== layersFrom(face, depth, n).pop()) continue;
+        if (!best || depth < best.depth) best = { depth, face };
       }
+    }
+    if (best) {
+      const turns = normalizeAmount(-FACE_SIGN[best.face] * amount);
+      return `${best.depth}${best.face}${modifierSuffix(turns)}`;
     }
   }
 

@@ -17,6 +17,18 @@ import { parseAlg } from './core/notation.js';
 import { invertAlg } from './core/moves.js';
 import { algIndexFor } from './ui/useLoadCase.js';
 
+/**
+ * Put the theme on the document root, where the CSS tokens hang off it.
+ * Dark is the stylesheet's default, so only light needs an attribute.
+ */
+function useTheme() {
+  const theme = usePrefsStore((s) => s.theme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  return theme;
+}
+
 /** Push the stored colour scheme into the shared cubie geometries. */
 function useColorScheme() {
   const top = usePrefsStore((s) => s.top);
@@ -74,6 +86,7 @@ export default function App() {
 
   const n = useCubeStore((s) => s.n);
 
+  const theme = useTheme();
   useKeyboard();
   useColorScheme();
   useRestoreSession();
@@ -129,6 +142,7 @@ export default function App() {
               view={view}
               autoRotate={autoRotate}
               locked={locked}
+              theme={theme}
               onActiveView={setActiveView}
             />
           </div>

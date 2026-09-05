@@ -18,7 +18,7 @@ import {
   ortegaOllKey,
   pblKey,
 } from '../core/twoByTwo.js';
-import { isSolved } from '../core/cube.js';
+import { createSolvedCube as solvedCube, isSolved, worldFaceOf } from '../core/cube.js';
 import { formatAlg } from '../core/notation.js';
 import { algIndexFor } from '../ui/useLoadCase.js';
 import {
@@ -53,6 +53,7 @@ describe('the library', () => {
     for (const [n, expected] of [
       [3, 78],
       [2, 12],
+      [4, 2],
     ]) {
       const listed = sectionsFor(n).flatMap((s) => s.groups.flatMap((g) => g.cases));
       expect(listed, `${n}x${n}`).toHaveLength(expected);
@@ -62,7 +63,7 @@ describe('the library', () => {
   });
 
   it('offers no library for sizes that have none yet', () => {
-    expect(sectionsFor(4)).toEqual([]);
+    expect(sectionsFor(5)).toEqual([]);
   });
 
   it('gives every case at least one algorithm and a setup', () => {
@@ -360,5 +361,78 @@ describe('algorithm variants', () => {
     expect(algIndexFor(sune, { 'OLL-27': 1 })).toBe(1);
     expect(algIndexFor(sune, { 'OLL-27': 99 })).toBe(sune.algs.length - 1);
     expect(algIndexFor(sune, { 'OLL-27': -3 })).toBe(0);
+  });
+});
+
+/**
+ * The 4x4 parity cases.
+ *
+ * Big-cube notation is ambiguous — `r` means the inner slice in some listings
+ * and a wide turn in others, and the two readings give completely different
+ * results. So rather than trust the spelling, each case is checked to be the
+ * parity it claims: which stickers are wrong, and on which kind of piece.
+ */
+describe('4x4 parity', () => {
+  const parity = CASES.filter((c) => c.n === 4);
+
+  /** Stickers not showing their own colour, tagged by the piece they sit on. */
+  const wrongStickers = (cube) => {
+    const out = [];
+    for (const cubie of cube.cubies) {
+      for (const local in cubie.stickers) {
+        const face = worldFaceOf(cubie, local);
+        if (cubie.stickers[local] === face) continue;
+        const outerCount = cubie.pos.filter((v) => Math.abs(v) === 3).length;
+        out.push({
+          slot: cubie.pos.join(','),
+          kind: outerCount === 3 ? 'corner' : outerCount === 2 ? 'wing' : 'centre',
+        });
+      }
+    }
+    return out;
+  };
+
+  it('has both cases', () => {
+    expect(parity.map((c) => c.id).sort()).toEqual(['PAR-OLL', 'PAR-PLL']);
+  });
+
+  it('every algorithm solves its case', () => {
+    for (const testCase of parity) {
+      for (const alg of testCase.algs) {
+        const state = stateForAlg(alg, 4);
+        expect(isSolved(applyAlg(state, parseAlg(alg, 4))), `${testCase.id}: ${alg}`).toBe(true);
+      }
+    }
+  });
+
+  it('leaves corners and centres alone — only wings are out of place', () => {
+    for (const testCase of parity) {
+      const wrong = wrongStickers(stateForAlg(testCase.algs[0], 4));
+      expect(
+        wrong.every((w) => w.kind === 'wing'),
+        testCase.id,
+      ).toBe(true);
+    }
+  });
+
+  it('OLL parity is one dedge flipped', () => {
+    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR-OLL').algs[0], 4));
+    // Both wings of a single dedge, each showing its two colours the wrong way.
+    expect(wrong).toHaveLength(4);
+    expect(new Set(wrong.map((w) => w.slot)).size).toBe(2);
+  });
+
+  it('PLL parity is two dedges swapped', () => {
+    const wrong = wrongStickers(stateForAlg(CASES_BY_ID.get('PAR-PLL').algs[0], 4));
+    // Four wings, one wrong sticker each: their top facelets still match, only
+    // the side colours have traded places.
+    expect(wrong).toHaveLength(4);
+    expect(new Set(wrong.map((w) => w.slot)).size).toBe(4);
+  });
+
+  it('the two cases are different from each other', () => {
+    const [a, b] = parity.map((c) => stateForAlg(c.algs[0], 4));
+    expect(JSON.stringify(a.cubies)).not.toBe(JSON.stringify(b.cubies));
+    expect(isSolved(solvedCube(4))).toBe(true);
   });
 });

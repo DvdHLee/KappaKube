@@ -1,4 +1,4 @@
-import { COLORS, UNORIENTED_COLOR } from '../theme.js';
+import { COLORS } from '../theme.js';
 import { currentScheme, usePrefsStore } from '../state/usePrefsStore.js';
 
 /**
@@ -34,9 +34,10 @@ export default function CaseDiagram({ view, kind, size = 34, className = '' }) {
   // Orientation steps show two colours: is this the top colour, or not. The
   // permutation steps need every face, since that is what you read.
   const orientationOnly = kind === 'OLL' || kind === 'Ortega OLL';
+  // The unoriented grey is a CSS token, so it follows the theme.
   const fill = (letter) => {
-    if (orientationOnly) return letter === 'U' ? COLORS[scheme.U] : UNORIENTED_COLOR;
-    return COLORS[scheme[letter]] ?? UNORIENTED_COLOR;
+    if (orientationOnly) return letter === 'U' ? COLORS[scheme.U] : 'var(--unoriented)';
+    return COLORS[scheme[letter]] ?? 'var(--unoriented)';
   };
 
   const cells = view.face.map((letter, i) => (

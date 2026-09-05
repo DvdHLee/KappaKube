@@ -23,10 +23,6 @@ export const DEFAULT_FRONT = 'red';
 // the inward-facing sides you glimpse through the seams.
 export const INTERIOR_COLOR = '#131317';
 
-/** Stickers not yet oriented, in an OLL recognition diagram. */
-export const UNORIENTED_COLOR = '#3f3f49';
-export const BACKGROUND_COLOR = '#0c0c10';
-
 // Geometry constants, in world units. Lattice spacing is always 1.
 export const SPACING = 1;
 export const CUBIE_SIZE = 0.98; // < SPACING leaves a hairline seam between pieces

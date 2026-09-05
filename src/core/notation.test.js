@@ -174,6 +174,17 @@ describe('formatting', () => {
     expect(formatAlg(parseAlg('(R U)2'))).toBe('R U R U');
   });
 
+  it('names an inner layer from the nearer face', () => {
+    // The layer at -1 on a 4x4 is both 2L and 3R; a cuber writes 2L.
+    expect(formatAlg(parseAlg('3R', 4), 4)).toBe("2L'");
+    expect(formatAlg(parseAlg('2L', 4), 4)).toBe('2L');
+    expect(formatAlg(parseAlg('2R', 4), 4)).toBe('2R');
+    // Turning the same layer clockwise from R is counter-clockwise from L, so
+    // the prime has to flip with the renaming.
+    expect(parseAlg('3R', 4)[0].layers).toEqual(parseAlg("2L'", 4)[0].layers);
+    expect(parseAlg('3R', 4)[0].amount).toBe(parseAlg("2L'", 4)[0].amount);
+  });
+
   it('formats larger cubes', () => {
     expect(formatAlg(parseAlg('3Rw', 5), 5)).toBe('3Rw');
     expect(formatAlg(parseAlg('Rw', 4), 4)).toBe('Rw');

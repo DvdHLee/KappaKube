@@ -16,9 +16,11 @@ import { applyAlg, invertAlg } from '../core/moves.js';
 import { formatAlg, parseAlg } from '../core/notation.js';
 import { orientationPattern, topView as topView3 } from '../core/lastLayer.js';
 import { topView as topView2 } from '../core/twoByTwo.js';
+import { topViewAnySize } from '../core/topView.js';
 import { OLL_CASES, OLL_GROUPS } from './oll.js';
 import { PLL_CASES, PLL_GROUPS } from './pll.js';
 import { ORTEGA_OLL, ORTEGA_OLL_GROUP, ORTEGA_PBL, ORTEGA_PBL_GROUP } from './ortega.js';
+import { PARITY_CASES, PARITY_GROUP } from './parity.js';
 
 /** The cube state an algorithm is meant to be applied to. */
 export function stateForAlg(algText, n = 3) {
@@ -36,7 +38,7 @@ function build({ id, n, kind, label, name, group, algs }) {
     group, // "Cross", "J perms"
     algs: algs.map((alg) => formatAlg(parseAlg(alg, n), n)),
     setup: formatAlg(invertAlg(parseAlg(algs[0], n)), n),
-    view: n === 2 ? topView2(state) : topView3(state),
+    view: n === 2 ? topView2(state) : n === 3 ? topView3(state) : topViewAnySize(state),
     ...(n === 3 ? { pattern: orientationPattern(state) } : {}),
   };
 }
@@ -86,6 +88,17 @@ export const CASES = [
       algs: c.algs,
     }),
   ),
+  ...PARITY_CASES.map((c) =>
+    build({
+      id: `PAR-${c.id}`,
+      n: 4,
+      kind: 'Parity',
+      label: `${c.id} parity`,
+      name: `${c.name} — ${c.note}`,
+      group: PARITY_GROUP,
+      algs: c.algs,
+    }),
+  ),
 ];
 
 export const CASES_BY_ID = new Map(CASES.map((c) => [c.id, c]));
@@ -109,6 +122,14 @@ const SECTIONS_BY_SIZE = {
         group: `${letter} perm${'AUJRGN'.includes(letter) ? 's' : ''}`,
         cases: forSize(3, 'PLL', letter),
       })),
+    },
+  ],
+  4: [
+    {
+      kind: 'Parity',
+      title: 'Parity',
+      subtitle: 'Edge Flips',
+      groups: [{ group: PARITY_GROUP, cases: forSize(4, 'Parity') }],
     },
   ],
   2: [

@@ -83,32 +83,41 @@ function ActiveViewProbe({ onChange }) {
 }
 
 /**
- * Studio lighting built entirely from Lightformers inside a generated environment
- * map: soft reflections and no network fetch for an HDRI. frames={1} bakes it once.
+ * Studio lighting built entirely from Lightformers inside a generated
+ * environment map: soft reflections and no network fetch for an HDRI.
+ * frames={1} bakes it once.
+ *
+ * Kept gentle on purpose. Strong key light plus a glossy surface produced a
+ * bright sheen that lifted every face away from its palette colour; at these
+ * levels the light shapes the cube without recolouring it.
+ *
+ * The ambient tone follows the theme, so the cube is lit by a room that matches
+ * the page rather than carrying a dark surround onto a light one.
  */
-function Studio() {
+function Studio({ theme }) {
+  const ambient = theme === 'light' ? '#dcdce4' : '#111114';
   return (
-    <Environment resolution={256} frames={1}>
-      <color attach="background" args={['#111114']} />
+    <Environment key={theme} resolution={256} frames={1}>
+      <color attach="background" args={[ambient]} />
       {/* key: large softbox overhead */}
-      <Lightformer form="rect" intensity={5} position={[0, 6, 1]} scale={[10, 10, 1]} />
+      <Lightformer form="rect" intensity={2.1} position={[0, 6, 1]} scale={[10, 10, 1]} />
       {/* fill: cool, front left */}
       <Lightformer
         form="rect"
-        intensity={2}
-        color="#cfe4ff"
+        intensity={0.9}
+        color="#dce7f5"
         position={[-6, 1, 5]}
         scale={[8, 8, 1]}
       />
       {/* rim: warm, behind right, separates the cube from the background */}
       <Lightformer
         form="rect"
-        intensity={3}
-        color="#ffd9b8"
+        intensity={1.1}
+        color="#f5e4d2"
         position={[6, 2, -6]}
         scale={[8, 8, 1]}
       />
-      <Lightformer form="rect" intensity={1} position={[0, -5, 0]} scale={[8, 8, 1]} />
+      <Lightformer form="rect" intensity={0.5} position={[0, -5, 0]} scale={[8, 8, 1]} />
     </Environment>
   );
 }
@@ -121,7 +130,7 @@ function AspectProbe({ onChange }) {
   return null;
 }
 
-export default function Scene({ n, view, autoRotate, locked, onActiveView }) {
+export default function Scene({ n, view, autoRotate, locked, theme, onActiveView }) {
   const radius = cubeRadius(n);
   const pivotRef = useRef(null);
   const [aspect, setAspect] = useState(1);
@@ -138,7 +147,7 @@ export default function Scene({ n, view, autoRotate, locked, onActiveView }) {
           backdrop runs unbroken behind the algorithm bar, the cube and the
           player, instead of the canvas painting a flat rectangle over it. */}
 
-      <Studio />
+      <Studio theme={theme} />
 
       <DragToTurn enabled={locked} pivotRef={pivotRef}>
         <CubeMesh cube={cube} current={current} pivotRef={pivotRef} />
@@ -150,10 +159,10 @@ export default function Scene({ n, view, autoRotate, locked, onActiveView }) {
         position={[0, -radius - 0.02, 0]}
         scale={radius * 6}
         blur={2.6}
-        opacity={0.6}
+        opacity={theme === 'light' ? 0.32 : 0.6}
         far={radius * 2}
         resolution={512}
-        color="#000000"
+        color={theme === 'light' ? '#2a2a3a' : '#000000'}
       />
 
       <OrbitControls

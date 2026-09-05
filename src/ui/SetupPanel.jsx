@@ -10,10 +10,15 @@ const VIEW_OPTIONS = [
   { value: 'free', label: 'Free', title: 'Wherever you have dragged the camera' },
 ];
 
-// 4x4 is hidden until it has an algorithm set of its own.
+const THEME_OPTIONS = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+];
+
 const SIZE_OPTIONS = [
   { value: '2', label: '2x2' },
   { value: '3', label: '3x3' },
+  { value: '4', label: '4x4' },
 ];
 
 const swatches = (names) =>
@@ -31,6 +36,8 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
   const setFront = usePrefsStore((s) => s.setFront);
   const setPrefSize = usePrefsStore((s) => s.setSize);
   const selectCase = usePrefsStore((s) => s.selectCase);
+  const theme = usePrefsStore((s) => s.theme);
+  const setTheme = usePrefsStore((s) => s.setTheme);
   const setupOpen = usePrefsStore((s) => s.setupOpen);
   const setSetupOpen = usePrefsStore((s) => s.setSetupOpen);
 
@@ -74,6 +81,7 @@ export default function SetupPanel({ activeView, onView, autoRotate, onAutoRotat
           Free the moment you orbit off the preset. */}
           <Segmented label="View" options={VIEW_OPTIONS} value={activeView} onChange={onView} />
           <Segmented label="Size" options={SIZE_OPTIONS} value={String(n)} onChange={changeSize} />
+          <Segmented label="Theme" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
 
           <Segmented
             label="Top"

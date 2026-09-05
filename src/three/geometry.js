@@ -117,13 +117,16 @@ export function setColorScheme(scheme) {
 }
 
 /**
- * One material for the whole cube. Slight clearcoat reads as the glossy moulded
- * plastic of a stickerless cube without tipping into looking wet.
+ * One material for the whole cube.
+ *
+ * Deliberately matte: a rougher surface with only a trace of clearcoat keeps
+ * the specular highlight from washing the colours out, so each face reads close
+ * to its actual palette value rather than looking spotlit.
  */
 export const cubieMaterial = new THREE.MeshPhysicalMaterial({
   vertexColors: true,
-  roughness: 0.45,
+  roughness: 0.62,
   metalness: 0,
-  clearcoat: 0.4,
-  clearcoatRoughness: 0.35,
+  clearcoat: 0.12,
+  clearcoatRoughness: 0.5,
 });
